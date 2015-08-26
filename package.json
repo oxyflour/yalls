@@ -4,6 +4,7 @@
   "description": "Yet Another Lua-Like Script",
   "main": "index.js",
   "scripts": {
+    "build": "babel src --out-dir build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -23,5 +24,8 @@
   "homepage": "https://github.com/oxyflour/yalls#readme",
   "dependencies": {
     "yajily": "latest"
+  },
+  "devDependencies": {
+    "babel": "latest"
   }
 }
