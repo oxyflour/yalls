@@ -71,11 +71,11 @@ print('for in dict')
 for v, k = pair({ ['ok']='for loop', 'hi' }) do
 	print('  ', v, ': ', k)
 end
+print('for in array')
+for v, i = ipair(array(1, 2, 3)) do
+	print('  ', v, ': ', i)
+end
 
-</pre>
-
-TOKENS:
-<pre id="tokens">
 </pre>
 
 PARSE TREE:
@@ -91,6 +91,62 @@ RESULT:
 <script src="node_modules/yajily/build/lexer.js"></script>
 <script src="node_modules/yajily/build/parser.js"></script>
 <script src="build/interpreter.js"></script>
-<script src="build/index.js"></script>
+<script src="build/definition.js"></script>
+<script>
+
+function format(tree, depth) {
+	depth = depth || 0
+	var space = Array.apply(null, Array(depth))
+			.map(function(v){ return '|  '}).join('')
+	if (typeof(tree) !== typeof({ })) {
+		return tree + '\n'
+	}
+	else if (tree && 'type' in tree && 'value' in tree) {
+		return tree.value + ' [' + tree.type + ']' + '\n'
+	}
+	else if (depth < 10) {
+		var text = (tree.type ? '[' + tree.type + ']' : '' ) + '\n'
+		for (var key in tree) {
+			if (tree.hasOwnProperty(key) && key !== 'type')
+				text += space + key + ': ' + format(tree[key], depth + 1)
+		}
+		return text
+	}
+}
+
+function compile(tree) {
+	if (Array.isArray(tree))
+		return tree.map(compile)
+	else if (tree === undefined || tree === null)
+		return 'nil'
+	else if (tree.type === 'STR')
+		return '"' + tree.value
+	else if (tree.value !== undefined)
+		return tree.value
+	else
+		return tree
+}
+
+function execute(input, table) {
+	var tokens = lex(input, definition.actions),
+		tree = parse(tokens, definition.grammars, table, definition.precedence),
+		code = compile(tree)
+	$('#tree').text(format(code))
+	evaluate(code, env)
+}
+
+var env = evaluate.rootenv()
+// inject print function
+env('print', function() {
+	$('#result').append('<pre>' +
+		Array.prototype.slice.call(arguments).join(' ') +
+	'</pre>')
+})
+// load compiled table
+$.get('build/table.json', function(table) {
+	execute($('#input').text(), table)
+})
+
+</script>
 </body>
 </html>

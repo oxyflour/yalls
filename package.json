@@ -4,7 +4,7 @@
   "description": "Yet Another Lua-Like Script",
   "main": "index.js",
   "scripts": {
-    "build": "babel src --out-dir build",
+    "build": "babel src --out-dir build && node build-table.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -26,6 +26,7 @@
     "yajily": "latest"
   },
   "devDependencies": {
-    "babel": "latest"
+    "babel": "latest",
+    "babel-core": "latest"
   }
 }

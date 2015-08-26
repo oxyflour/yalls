@@ -83,8 +83,6 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 	}
 
 	function rootenv() {
-		var _arguments = arguments;
-
 		var env = function env(key, value) {
 			if (value !== undefined) return map[key] = value;else if (typeof key !== 'string') return key;else if (key[0] === '"') return key.substr(1);else if (map[key] !== undefined) return map[key];else throw 'undefined variable `' + key + '`!';
 		};
@@ -131,8 +129,13 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 				return a === b;
 			},
 
+			'print': function print() {
+				console.log.apply(console, arguments);
+				return arguments[arguments.length - 1];
+			},
+
 			'begin': function begin() {
-				return _arguments[_arguments.length - 1];
+				arguments[arguments.length - 1];
 			},
 
 			'for': function _for(iterator, func) {
@@ -144,7 +147,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 				var start = 0,
 				    step = 1,
 				    end = 0,
-				    args = Array.prototype.slice.apply(_arguments);
+				    args = Array.prototype.slice.apply(arguments);
 				if (args.length === 1) end = args[0];else if (args.length === 2) {
 					;
 
@@ -177,9 +180,13 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 				};
 			},
 
-			'print': function print() {
-				console.log.apply(console, _arguments);
-				return _arguments[_arguments.length - 1];
+			'ipair': function ipair(list) {
+				return function (v, i) {
+					i = i === undefined ? 0 : i + 1;
+					if (i >= 0 && i < list.length) {
+						return [list[i], i];
+					}
+				};
 			},
 
 			'.': function _(a, b, v) {
@@ -187,14 +194,14 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			},
 
 			'array': function array() {
-				return Array.prototype.slice.apply(_arguments);
+				return Array.prototype.slice.apply(arguments);
 			},
 
 			'dict': function dict() {
 				var d = {};
-				for (var i = 0; i < _arguments.length; i += 2) {
-					var k = _arguments[i],
-					    v = _arguments[i + 1];
+				for (var i = 0; i < arguments.length; i += 2) {
+					var k = arguments[i],
+					    v = arguments[i + 1];
 					d[k === null ? i : k] = v;
 				}
 				return d;

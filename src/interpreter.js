@@ -126,15 +126,22 @@ function rootenv() {
 		'<=': (a, b) => a <= b,
 		'==': (a, b) => a === b,
 
-		'begin': () => arguments[arguments.length - 1],
+		'print': function() {
+			console.log.apply(console, arguments)
+			return arguments[arguments.length - 1]
+		},
 
-		'for': (iterator, func) => {
+		'begin': function() {
+			arguments[arguments.length - 1]
+		},
+
+		'for': function(iterator, func) {
 			var data = [ ]
 			while (data = apply(iterator, data))
 				apply(func, data)
 		},
 
-		'range': () => {
+		'range': function() {
 			var start = 0, step = 1, end = 0,
 				args = Array.prototype.slice.apply(arguments)
 			if (args.length === 1)
@@ -150,7 +157,7 @@ function rootenv() {
 			}
 		},
 
-		'pair': (object) => {
+		'pair': function(object) {
 			var keys = Object.keys(object)
 			return (v, k, i) => {
 				i = i === undefined ? 0 : i + 1
@@ -161,16 +168,24 @@ function rootenv() {
 			}
 		},
 
-		'print': () => {
-			console.log.apply(console, arguments)
-			return arguments[arguments.length - 1]
+		'ipair': function(list) {
+			return (v, i) => {
+				i = i === undefined ? 0 : i + 1
+				if (i >= 0 && i < list.length) {
+					return [list[i], i]
+				}
+			}
 		},
 
-		'.': (a, b, v) => v !== undefined ? (a[b] = v, a) : a[b],
+		'.': function(a, b, v) {
+			return v !== undefined ? (a[b] = v, a) : a[b]
+		},
 
-		'array': () => Array.prototype.slice.apply(arguments),
+		'array': function() {
+			return Array.prototype.slice.apply(arguments)
+		},
 
-		'dict': () => {
+		'dict': function() {
 			var d = { }
 			for (var i = 0; i < arguments.length; i += 2) {
 				var k = arguments[i],

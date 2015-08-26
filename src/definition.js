@@ -1,3 +1,5 @@
+(function() {
+
 var line = 0, col = 1
 function count(value) {
 	if (value === '\n')
@@ -10,25 +12,6 @@ function token(type, value, string) {
 	var t = { type, value, line, col }
 	count(string !== undefined ? string : value)
 	return t
-}
-
-function format(tree, depth) {
-	depth = depth || 0
-	var space = Array.apply(null, Array(depth)).map(v => '|  ').join('')
-	if (typeof(tree) !== typeof({ })) {
-		return tree + '\n'
-	}
-	else if (tree && 'type' in tree && 'value' in tree) {
-		return tree.value + ' [' + tree.type + ']' + '\n'
-	}
-	else if (depth < 10) {
-		var text = (tree.type ? '[' + tree.type + ']' : '' ) + '\n'
-		for (var key in tree) {
-			if (tree.hasOwnProperty(key) && key !== 'type')
-				text += space + key + ': ' + format(tree[key], depth + 1)
-		}
-		return text
-	}
 }
 
 function beginStringGen(tag) {
@@ -69,7 +52,7 @@ function endCommentWithNewLine(m) {
 	return token('NEWLINE', ';', '\n')
 }
 
-var tokens = lex($('#input').text(), [
+var actions = [
 
 	[/not/,
 		m => token('UNOP', m)],
@@ -122,11 +105,10 @@ var tokens = lex($('#input').text(), [
 
 	[/[\t\r ]+/,
 		m => count(m)]
-])
 
-$('#tokens').text(tokens.map(t => t.value + ': ' + t.type).join('\n'))
+]
 
-var tree = parse(tokens, [
+var grammars = [
 
 	['S', ['block']],
 
@@ -144,6 +126,8 @@ var tree = parse(tokens, [
 	['statlist', ['statlist', 'stat'],
 		(l, s) => l.concat([s])],
 	['statlist', ['statlist', 'NEWLINE']],
+
+	// ref: http://lua-users.org/wiki/LuaGrammar
 
 	['laststat', ['return'],
 		(_r) => null],
@@ -296,7 +280,9 @@ var tree = parse(tokens, [
 	['field', ['[', 'exp', ']', '=', 'exp'],
 		(_l, e1, _r, _eq, e2) => [e1, e2]],
 
-], null, {
+]
+
+var precedence = {
 	UNOP: [20, 'right'],
 	BINOP4: [10, 'left'],
 	BINOP3: [11, 'left'],
@@ -305,31 +291,13 @@ var tree = parse(tokens, [
 	BINOP0: [14, 'right'],
 	'(': [1, 'right'],
 	'=': [1, 'right'],
-})
+}
 
-var code = (function compile(tree) {
-	if (Array.isArray(tree))
-		return tree.map(compile)
-	else if (tree === undefined || tree === null)
-		return 'nil'
-	else if (tree.type === 'STR')
-		return '"' + tree.value
-	else if (tree.value !== undefined)
-		return tree.value
-	else
-		return tree
-})(tree)
+var definition = { grammars, actions, precedence }
 
-$('#tree').text(format(code))
+if (typeof(module) !== 'undefined')
+	module.exports = definition
+else if (typeof(window) !== 'undefined')
+	window.definition = definition
 
-var env = evaluate.rootenv()
-// inject print function
-env('print', function() {
-	$('#result').append('<pre>' +
-		Array.prototype.slice.call(arguments).join(' ') +
-	'</pre>')
-})
-
-// go
-evaluate(code, env)
-
+})()
