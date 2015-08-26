@@ -103,7 +103,9 @@
 
 	['laststat', ['return'], function (_r) {
 		return null;
-	}], ['laststat', ['return', 'explist'], function (_r, e) {
+	}],
+	// only on return value is allowed
+	['laststat', ['return', 'exp'], function (_r, e) {
 		return e;
 	}], ['stat', ['funcall']], ['stat', ['do', 'block', 'end'], function (_do, b, _end) {
 		return b;

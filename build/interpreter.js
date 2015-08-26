@@ -135,7 +135,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			},
 
 			'begin': function begin() {
-				arguments[arguments.length - 1];
+				return arguments[arguments.length - 1];
 			},
 
 			'for': function _for(iterator, func) {
@@ -198,11 +198,12 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			},
 
 			'dict': function dict() {
-				var d = {};
+				var d = {},
+				    j = 0;
 				for (var i = 0; i < arguments.length; i += 2) {
 					var k = arguments[i],
 					    v = arguments[i + 1];
-					d[k === null ? i : k] = v;
+					d[k === null ? j++ : k] = v;
 				}
 				return d;
 			}

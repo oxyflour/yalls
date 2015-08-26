@@ -132,7 +132,8 @@ var grammars = [
 
 	['laststat', ['return'],
 		(_r) => null],
-	['laststat', ['return', 'explist'],
+	// only on return value is allowed
+	['laststat', ['return', 'exp'],
 		(_r, e) => e],
 
 	['stat', ['funcall']],

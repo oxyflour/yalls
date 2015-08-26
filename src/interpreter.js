@@ -132,7 +132,7 @@ function rootenv() {
 		},
 
 		'begin': function() {
-			arguments[arguments.length - 1]
+			return arguments[arguments.length - 1]
 		},
 
 		'for': function(iterator, func) {
@@ -186,11 +186,11 @@ function rootenv() {
 		},
 
 		'dict': function() {
-			var d = { }
+			var d = { }, j = 0
 			for (var i = 0; i < arguments.length; i += 2) {
 				var k = arguments[i],
 					v = arguments[i + 1]
-				d[ k === null ? i : k ] = v
+				d[ k === null ? (j ++) : k ] = v
 			}
 			return d
 		},
