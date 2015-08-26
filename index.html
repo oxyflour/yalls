@@ -25,10 +25,8 @@ f2 = func(a)
 	print('if 10 =', a, ', lambda is ok')
 end
 f2(10)
-f3 = func()
-	return 1
-end
-print('if 1 =', f3(), ', return value is ok')
+f3 = (func() return 1 end)()
+print('if 1 =', f3, ', return value is ok')
 
 -- table
 e = { 1, 2, 3, k = 'v' }
