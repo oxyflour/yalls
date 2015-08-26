@@ -3,18 +3,20 @@
 <body>
 INPUT:
 <pre id="input">
-[[[
-	large block comment
-]]]
+--[[
 
-# hellp
+	large block comment
+
+--]]
+
+-- hellp
 a = 1
 c, d = 2, 3
 print('set ok', a, c, d)
 d, c = c, d
 print('swap ok', c, d)
 
-# function calls
+-- function calls
 func f(a)
 	print('func ok', a)
 end
@@ -27,7 +29,7 @@ f2 = func(a)
 end
 f2(10)
 
-# table
+-- table
 e = { 1, 2, 3, k = 'dict get ok' }
 print('dict ok', e)
 k = 'k'
@@ -37,7 +39,7 @@ print(e['k'])
 e.k = 'dict set ok'
 print(e.k)
 
-# if statements
+-- if statements
 if 1 > 0 then
 	print('if ok')
 end
@@ -54,7 +56,7 @@ else
 	print('elseif ok3')
 end
 
-# for statements
+-- for statements
 print('for from 0~4')
 for i = range(5) do
 	print(i)

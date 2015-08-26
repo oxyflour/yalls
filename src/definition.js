@@ -90,12 +90,13 @@ var actions = [
 	[/'/, 			endString,		'string1'],
 
 	// comments
-	[/#/,			beginCommentGen('comment-sl')],
+	[/--/,			beginCommentGen('comment-sl')],
 	[/[^\n]+/,		eatComment,				'comment-sl'],
 	[/\n/,			endCommentWithNewLine,	'comment-sl'],
-	[/\[\[\[/,		beginCommentGen('comment-ml')],
-	[/[^(\]\]\])]/,	eatComment,				'comment-ml'],
-	[/\]\]\]/,		endComment,				'comment-ml'],
+	[/--\[\[/,		beginCommentGen('comment-ml')],
+	[/.*?--\]\]/,	endComment,				'comment-ml'],
+	[/.*/,			eatComment,				'comment-ml'],
+	[/\n/,			eatComment,				'comment-ml'],
 
 	[/\[|{|\(|\]|}|\)|\.|=|,|\:/,
 		m => token(m, m)],
