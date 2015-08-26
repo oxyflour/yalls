@@ -1,2 +1,2 @@
 # yalls
-Yet Another Lua Like Script
+Yet Another Lua-Like Script
