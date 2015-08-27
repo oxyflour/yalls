@@ -69,9 +69,9 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			}));else return env(exp);
 	}
 
-	function apply(func, args) {
+	function apply(func, args, ctx) {
 		// apply buildin function
-		if (func.apply) return func.apply(null, args);
+		if (func.apply) return func.apply(ctx, args);
 
 		// core apply
 		var lambda = func.lambda,
@@ -79,6 +79,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 		args.forEach(function (a, i) {
 			return env(lambda[i + 1], a);
 		});
+		ctx !== undefined && env('this', ctx);
 		return evaluate(lambda[lambda.length - 1], env);
 	}
 
@@ -194,7 +195,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			},
 
 			':': function _(o, k) {
-				return o[k].apply(o, Array.prototype.slice.apply(arguments).slice(2));
+				return apply(o[k], Array.prototype.slice.apply(arguments).slice(2), o);
 			},
 
 			'array': function array() {

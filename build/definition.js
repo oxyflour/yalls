@@ -117,7 +117,8 @@
 	}], ['stat', ['if', 'conds', 'end'], function (_if, c) {
 		return ['cond'].concat(c);
 	}], ['stat', ['func', 'funcname', 'funcbody'], function (_func, n, b) {
-		return ['set', n, b];
+		// transform [set [. obj key] val] -> [set obj [. obj key val]]
+		if (Array.isArray(n) && n[0] === '.') return n.concat([b]);else return ['set', n, b];
 	}], ['stat', ['setlist', '=', 'explist'], function (a, _eq, e) {
 		return a.reduce(function (l, i, j) {
 			// transform [set [. obj key] val] -> [set obj [. obj key val]]
@@ -149,10 +150,10 @@
 		throw 'not implemented';
 	}], ['binding', ['local', 'func', 'ID', 'funcbody'], function (_var, _func, i, f) {
 		throw 'not implemented';
-	}], ['funcname', ['dottedname']], ['funcname', ['dottedname', ':', 'ID'], function (p, _c, i, a) {
-		throw 'not implemented!';
+	}], ['funcname', ['dottedname']], ['funcname', ['dottedname', ':', 'ID'], function (p, _c, i) {
+		return ['.', p, token('STR', i.value)];
 	}], ['dottedname', ['ID']], ['dottedname', ['dottedname', '.', 'ID'], function (n, _c, i) {
-		return ['.', n, i];
+		return ['.', n, token('STR', i.value)];
 	}], ['namelist', ['ID'], function (i) {
 		return [i];
 	}], ['namelist', ['namelist', ',', 'ID'], function (a, _c, i) {
@@ -180,7 +181,7 @@
 	}], ['variable', ['ID']], ['variable', ['prefix', '[', 'exp', ']'], function (p, _l, e, _r) {
 		return ['.', p, e];
 	}], ['variable', ['prefix', '.', 'ID'], function (p, _dot, i) {
-		return ['.', p, token('STR', i.value, '')];
+		return ['.', p, token('STR', i.value)];
 	}], ['prefix', ['variable']], ['prefix', ['funcall']], ['prefix', ['(', 'exp', ')'], function (_l, e, _r) {
 		return e;
 	}], ['funcall', ['prefix', 'args'], function (p, a) {

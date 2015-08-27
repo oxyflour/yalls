@@ -146,8 +146,13 @@ var grammars = [
 		(r, _do, b, _end) => ['for', r[1], ['lambda'].concat(r[0]).concat(b)]],
 	['stat', ['if', 'conds', 'end'],
 		(_if, c) => ['cond'].concat(c)],
-	['stat', ['func', 'funcname', 'funcbody'],
-		(_func, n, b) => ['set', n, b]],
+	['stat', ['func', 'funcname', 'funcbody'], (_func, n, b) => {
+		// transform [set [. obj key] val] -> [set obj [. obj key val]]
+		if (Array.isArray(n) && n[0] === '.')
+			return n.concat([b])
+		else
+			return ['set', n, b]
+	}],
 	['stat', ['setlist', '=', 'explist'], (a, _eq, e) => {
 		return a.reduce((l, i, j) => {
 			// transform [set [. obj key] val] -> [set obj [. obj key val]]
@@ -187,11 +192,11 @@ var grammars = [
 
 	['funcname', ['dottedname']],
 	['funcname', ['dottedname', ':', 'ID'],
-		(p, _c, i, a) => { throw 'not implemented!' }],
+		(p, _c, i) => ['.', p, token('STR', i.value)]],
 
 	['dottedname', ['ID']],
 	['dottedname', ['dottedname', '.', 'ID'],
-		(n, _c, i) => ['.', n, i]],
+		(n, _c, i) => ['.', n, token('STR', i.value)]],
 
 	['namelist', ['ID'],
 		(i) => [i]],
@@ -230,7 +235,7 @@ var grammars = [
 	['variable', ['prefix', '[', 'exp', ']'],
 		(p, _l, e, _r) => ['.', p, e]],
 	['variable', ['prefix', '.', 'ID'],
-		(p, _dot, i) => ['.', p, token('STR', i.value, '')]],
+		(p, _dot, i) => ['.', p, token('STR', i.value)]],
 
 	['prefix', ['variable']],
 	['prefix', ['funcall']],

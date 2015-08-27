@@ -43,6 +43,10 @@ print('if v2 =', e.k, ', set dict is ok')
 e.m = { }
 e.m.k = 'v3'
 print('if v3 =', e.m.k, ', set nested dict is ok')
+func e:m() return this.k end
+print('if v2 =', e:m(), ', define and call dict method is ok')
+e.m = func() return this.k end
+print('if v2 =', e:m(), ', define and call dict method is ok')
 
 -- if statements
 if 1 > 0 then
