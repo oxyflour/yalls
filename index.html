@@ -34,6 +34,9 @@ print('if 1 =', e[0], ', 2 =', e[1], ', 3 =', e[2], ', get dict is ok')
 print('if v =', e.k, '=', e['k'], ', get dict is ok')
 e.k = 'v2'
 print('if v2 =', e.k, ', set dict is ok')
+e.m = { }
+e.m.k = 'v3'
+print('if v3 =', e.m.k, ', set nested dict is ok')
 
 -- if statements
 if 1 > 0 then
@@ -73,6 +76,11 @@ print('if 3: 0; 2: 1; 1: 2 are printed, ipair is ok')
 for v, i = ipair(array(3, 2, 1)) do
 	print(v, ': ', i)
 end
+
+-- object call
+print('if 1 =', $('#input').length, ', injected object is ok')
+print('if input =', $('#input'):attr('id'), ', injected object is ok')
+
 
 </pre>
 
@@ -140,6 +148,8 @@ env('print', function() {
 		Array.prototype.slice.call(arguments).join(' ') +
 	'</pre>')
 })
+env('$', $)
+
 // load compiled table
 $.get('build/table.json', function(table) {
 	execute($('#input').text(), table)

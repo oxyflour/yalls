@@ -240,7 +240,7 @@ var grammars = [
 	['funcall', ['prefix', 'args'],
 		(p, a) => [p].concat(a)],
 	['funcall', ['prefix', ':', 'ID', 'args'],
-		(p, _c, i, a) => { throw 'not implemented!' }],
+		(p, _c, i, a) => [':', p, token('STR', i.value)].concat(a)],
 
 	['args', ['(', ')'],
 		(a) => [ ]],

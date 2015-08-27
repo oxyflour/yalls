@@ -189,8 +189,12 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 				};
 			},
 
-			'.': function _(a, b, v) {
-				return v !== undefined ? (a[b] = v, a) : a[b];
+			'.': function _(o, k, v) {
+				return v !== undefined ? (o[k] = v, o) : o[k];
+			},
+
+			':': function _(o, k) {
+				return o[k].apply(o, Array.prototype.slice.apply(arguments).slice(2));
 			},
 
 			'array': function array() {

@@ -177,8 +177,12 @@ function rootenv() {
 			}
 		},
 
-		'.': function(a, b, v) {
-			return v !== undefined ? (a[b] = v, a) : a[b]
+		'.': function(o, k, v) {
+			return v !== undefined ? (o[k] = v, o) : o[k]
+		},
+
+		':': function(o, k) {
+			return o[k].apply(o, Array.prototype.slice.apply(arguments).slice(2))
 		},
 
 		'array': function() {

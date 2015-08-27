@@ -186,7 +186,7 @@
 	}], ['funcall', ['prefix', 'args'], function (p, a) {
 		return [p].concat(a);
 	}], ['funcall', ['prefix', ':', 'ID', 'args'], function (p, _c, i, a) {
-		throw 'not implemented!';
+		return [':', p, token('STR', i.value)].concat(a);
 	}], ['args', ['(', ')'], function (a) {
 		return [];
 	}], ['args', ['(', 'explist', ')'], function (_l, a, _r) {
