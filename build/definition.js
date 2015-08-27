@@ -90,7 +90,7 @@
 	}]];
 
 	var grammars = [['S', ['block']], ['block', ['statlist']], ['block', ['cstatlist']], ['cstatlist', ['laststat']], ['cstatlist', ['statlist', 'laststat'], function (c, l) {
-		return c.concat(l);
+		return c.concat([l]);
 	}], ['cstatlist', ['cstatlist', 'NEWLINE']], ['statlist', ['NEWLINE'], function (n) {
 		return ['begin'];
 	}], ['statlist', ['stat'], function (s) {

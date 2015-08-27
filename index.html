@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <body>
-INPUT:
+<b>INPUT</b>:
 <pre id="input">
 --[[
 
@@ -27,6 +27,12 @@ end
 f2(10)
 f3 = (func() return 1 end)()
 print('if 1 =', f3, ', return value is ok')
+func f4(a)
+	func c() return a * a end
+	print('if 100 =', c(), ', closure is ok')
+	return 100
+end
+print('if 100 =', f4(10), ', closure is ok')
 
 -- table
 e = { 1, 2, 3, k = 'v' }
@@ -81,14 +87,12 @@ end
 print('if 1 =', $('#input').length, ', injected object is ok')
 print('if input =', $('#input'):attr('id'), ', injected object is ok')
 
-
 </pre>
 
-PARSE TREE:
-<pre id="tree">
-</pre>
 
-RESULT:
+<b>RESULT</b>: <button onclick="$('#tree').toggle()">show parse tree</button>
+<pre id="tree" style="display:none">
+</pre>
 <div id="result">
 </div>
 
@@ -142,12 +146,13 @@ function execute(input, table) {
 }
 
 var env = evaluate.rootenv()
-// inject print function
+// inject function
 env('print', function() {
 	$('#result').append('<pre>' +
 		Array.prototype.slice.call(arguments).join(' ') +
 	'</pre>')
 })
+// inject object
 env('$', $)
 
 // load compiled table

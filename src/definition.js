@@ -118,7 +118,7 @@ var grammars = [
 
 	['cstatlist', ['laststat']],
 	['cstatlist', ['statlist', 'laststat'],
-		(c, l) => c.concat(l)],
+		(c, l) => c.concat([l])],
 	['cstatlist', ['cstatlist', 'NEWLINE']],
 
 	['statlist', ['NEWLINE'],
