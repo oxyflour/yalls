@@ -148,7 +148,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 				var start = 0,
 				    step = 1,
 				    end = 0,
-				    args = Array.prototype.slice.apply(arguments);
+				    args = Array.prototype.slice.call(arguments);
 				if (args.length === 1) end = args[0];else if (args.length === 2) {
 					;
 
@@ -195,11 +195,11 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			},
 
 			':': function _(o, k) {
-				return apply(o[k], Array.prototype.slice.apply(arguments).slice(2), o);
+				return apply(o[k], Array.prototype.slice.call(arguments).slice(2), o);
 			},
 
 			'array': function array() {
-				return Array.prototype.slice.apply(arguments);
+				return Array.prototype.slice.call(arguments);
 			},
 
 			'dict': function dict() {
@@ -220,11 +220,11 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
   'cons': (a, b) => [a, b],
   'car': (a) => a[0],
   'cdr': (a) => a[1],
-  'list': () => Array.prototype.slice.apply(arguments)
+  'list': () => Array.prototype.slice.call(arguments)
   	.reduceRight((l, a) => [a, l], [ ]),
   'map': (l, f) => l.length === 0 ? [ ] :
   	[apply(f, [ l[0] ]), apply(map.map, [ l[1], f ])],
-  		'array': () => Array.prototype.slice.apply(arguments),
+  		'array': () => Array.prototype.slice.call(arguments),
   'array-map': (a, f) => a.map((v, i) => apply(f, [v, i])),
   		'*2': closure([LAMBDA, 'x', ['*', 'x', 2]], env),
   */

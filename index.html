@@ -2,21 +2,24 @@
 <html>
 <body>
 <b>INPUT</b>:
-<pre id="input">
+<button onclick="execute()">Execute</button>
+<textarea id="input" style="width:100%" rows="10">
 --[[
 
 	large block comment
 
 --]]
 
--- hellp
+-- single line comment
+
+print('-- testing variables')
 a = 1
 c, d = 2, 3
 print('if 1 =', a, ', 2 =', c, ', 3 =', d, ', set is ok')
 d, c = c, d
 print('if 3 =', c, ', 2 =', d, ', swap is ok')
 
--- function calls
+print('-- testing function calls')
 func f(a)
 	print('if 10 =', a, ', func is ok')
 end
@@ -34,7 +37,7 @@ func f4(a)
 end
 print('if 100 =', f4(10), ', closure is ok')
 
--- table
+print('-- testing dict')
 e = { 1, 2, 3, k = 'v' }
 print('if 1 =', e[0], ', 2 =', e[1], ', 3 =', e[2], ', get dict is ok')
 print('if v =', e.k, '=', e['k'], ', get dict is ok')
@@ -48,7 +51,11 @@ print('if v2 =', e:m(), ', define and call dict method is ok')
 e.m = func() return this.k end
 print('if v2 =', e:m(), ', define and call dict method is ok')
 
--- if statements
+print('-- testing array')
+e = array(1, 2, 3)
+print('if 1 =', e[0], ', 2 =', e[1], ', 3 =', e[2], ', get array is ok')
+
+print('-- testing if statements')
 if 1 > 0 then
 	print('if is ok')
 end
@@ -65,40 +72,48 @@ else
 	print('elseif is ok')
 end
 
--- for statements
+print('-- testing for statements')
 print('if 0~4 are printed, for is ok')
+print(' ')
 for i = range(5) do
-	print(i)
+	append(i)
 end
 print('if 1~4 are printed, for is ok')
+print(' ')
 for i = 1, 5 do
-	print(i)
+	append(i)
 end
 print('if 1, 3 are printed, for is ok')
+print(' ')
 for i = 1, 2, 5 do
-	print(i)
+	append(i)
 end
 print('if v: k; v2: 0 are printed, pair is ok')
+print(' ')
 for v, k = pair({ ['k']='v', 'v2' }) do
-	print(v, ': ', k)
+	append(v, ':', k)
 end
 print('if 3: 0; 2: 1; 1: 2 are printed, ipair is ok')
+print(' ')
 for v, i = ipair(array(3, 2, 1)) do
-	print(v, ': ', i)
+	append(v, ':', i)
 end
 
--- object call
-print('if 1 =', $('#input').length, ', injected object is ok')
-print('if input =', $('#input'):attr('id'), ', injected object is ok')
+print('-- testing injected objects')
+print('if 1 =', $('#input').length, ', injected object attribute is ok')
+print('if input =', $('#input'):attr('id'), ', injected object method is ok')
 
-</pre>
+</textarea>
 
 
-<b>RESULT</b>: <button onclick="$('#tree').toggle()">show parse tree</button>
+<b>RESULT</b>:
+<button onclick="$('#tree').toggle()">show parse tree</button>
 <pre id="tree" style="display:none">
 </pre>
 <div id="result">
+loading...
 </div>
+<small id="time"></small>
 
 <script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.6.15/browser-polyfill.min.js"></script>
@@ -115,15 +130,11 @@ function format(tree, depth) {
 	if (typeof(tree) !== typeof({ })) {
 		return tree + '\n'
 	}
-	else if (tree && 'type' in tree && 'value' in tree) {
-		return tree.value + ' [' + tree.type + ']' + '\n'
-	}
 	else if (depth < 10) {
-		var text = (tree.type ? '[' + tree.type + ']' : '' ) + '\n'
-		for (var key in tree) {
-			if (tree.hasOwnProperty(key) && key !== 'type')
+		var text = '\n'
+		for (var key in tree)
+			if (tree.hasOwnProperty(key))
 				text += space + key + ': ' + format(tree[key], depth + 1)
-		}
 		return text
 	}
 }
@@ -141,12 +152,23 @@ function compile(tree) {
 		return tree
 }
 
-function execute(input, table) {
-	var tokens = lex(input, definition.actions),
-		tree = parse(tokens, definition.grammars, table, definition.precedence),
-		code = compile(tree)
-	$('#tree').text(format(code))
-	evaluate(code, env)
+function execute() {
+	if (!table) return
+	$('#result').empty()
+	try {
+		var input = $('#input').val(),
+			tokens = lex(input, definition.actions),
+			tree = parse(tokens, definition.grammars, table, definition.precedence),
+			code = compile(tree)
+		$('#tree').text(format(code))
+
+		var tickStart = Date.now()
+		evaluate(code, env)
+		$('#time').text((Date.now() - tickStart) + 'ms')
+	}
+	catch (e) {
+		$('#result').text(e)
+	}
 }
 
 var env = evaluate.rootenv()
@@ -156,12 +178,18 @@ env('print', function() {
 		Array.prototype.slice.call(arguments).join(' ') +
 	'</pre>')
 })
+env('append', function() {
+	$('#result pre:last')[0].innerHTML +=
+		Array.prototype.slice.call(arguments).join(' ') + ', '
+})
 // inject object
 env('$', $)
 
-// load compiled table
-$.get('build/table.json', function(table) {
-	execute($('#input').text(), table)
+// compiled table, will be loaded later
+var table
+$.get('build/table.json', function(t) {
+	table = t
+	execute()
 })
 
 </script>
