@@ -30,7 +30,7 @@ print('if 1 =', f3, ', return value is ok')
 func f4(a)
 	func c() return a * a end
 	print('if 100 =', c(), ', closure is ok')
-	return 100
+	return c()
 end
 print('if 100 =', f4(10), ', closure is ok')
 
