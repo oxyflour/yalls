@@ -56,7 +56,12 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 	}
 
 	function closure(lambda, env) {
-		return { lambda: lambda, env: env };
+		return function () {
+			var e = environment(env);
+			if (this !== undefined) e('this', this);
+			for (var i = 1; i < lambda.length - 1; i++) e(lambda[i], arguments[i - 1]);
+			return evaluate(lambda[lambda.length - 1], e);
+		};
 	}
 
 	function evaluate(exp, env) {
@@ -69,18 +74,8 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			}));else return env(exp);
 	}
 
-	function apply(func, args, ctx) {
-		// apply buildin function
-		if (func.apply) return func.apply(ctx, args);
-
-		// core apply
-		var lambda = func.lambda,
-		    env = environment(func.env);
-		args.forEach(function (a, i) {
-			return env(lambda[i + 1], a);
-		});
-		ctx !== undefined && env('this', ctx);
-		return evaluate(lambda[lambda.length - 1], env);
+	function apply(func, args) {
+		return func.apply(null, args);
 	}
 
 	function rootenv() {
@@ -141,7 +136,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 			'for': function _for(iterator, func) {
 				var data = [];
-				while (data = apply(iterator, data)) apply(func, data);
+				while (data = iterator.apply(null, data)) func.apply(null, data);
 			},
 
 			'range': function range() {
@@ -195,7 +190,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			},
 
 			':': function _(o, k) {
-				return apply(o[k], Array.prototype.slice.call(arguments).slice(2), o);
+				return o[k].apply(o, Array.prototype.slice.call(arguments).slice(2));
 			},
 
 			'array': function array() {

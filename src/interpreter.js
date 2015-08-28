@@ -56,7 +56,14 @@ function environment(parent) {
 }
 
 function closure(lambda, env) {
-	return { lambda, env }
+	return function() {
+		var e = environment(env)
+		if (this !== undefined)
+			e('this', this)
+		for (var i = 1; i < lambda.length - 1; i ++)
+			e(lambda[i], arguments[i - 1])
+		return evaluate(lambda[lambda.length - 1], e)
+	}
 }
 
 function evaluate(exp, env) {
@@ -80,17 +87,8 @@ function evaluate(exp, env) {
 		return env(exp)
 }
 
-function apply(func, args, ctx) {
-	// apply buildin function
-	if (func.apply)
-		return func.apply(ctx, args)
-
-	// core apply
-	var lambda = func.lambda,
-		env = environment(func.env)
-	args.forEach((a, i) => env(lambda[i + 1], a))
-	ctx !== undefined && env('this', ctx)
-	return evaluate(lambda[lambda.length - 1], env)
+function apply(func, args) {
+	return func.apply(null, args)
 }
 
 function rootenv() {
@@ -138,8 +136,8 @@ function rootenv() {
 
 		'for': function(iterator, func) {
 			var data = [ ]
-			while (data = apply(iterator, data))
-				apply(func, data)
+			while (data = iterator.apply(null, data))
+				func.apply(null, data)
 		},
 
 		'range': function() {
@@ -183,7 +181,7 @@ function rootenv() {
 		},
 
 		':': function(o, k) {
-			return apply(o[k], Array.prototype.slice.call(arguments).slice(2), o)
+			return o[k].apply(o, Array.prototype.slice.call(arguments).slice(2))
 		},
 
 		'array': function() {
