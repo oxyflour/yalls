@@ -39,7 +39,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 		pairs.forEach(function (p) {
 			return env(p[0], p[1]);
 		});
-		return evaluate(exp[exp.length - 1], env);
+		return pairs[0] && pairs[0][1];
 	}
 
 	// [.cond cond1, exp1, cond2, exp2, ... [condi], expi]
@@ -51,14 +51,14 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 	function environment(parent) {
 		var map = {};
 		return function (key, value) {
-			return value !== undefined ? map[key] = value : map[key] !== undefined ? map[key] : parent(key);
+			return arguments.length > 1 ? map[key] = value : key in map ? map[key] : parent(key);
 		};
 	}
 
 	function closure(lambda, env) {
 		return function () {
 			var e = environment(env);
-			if (this !== undefined) e('this', this);
+			this && e('this', this);
 			for (var i = 1; i < lambda.length - 1; i++) e(lambda[i], arguments[i - 1]);
 			return evaluate(lambda[lambda.length - 1], e);
 		};
@@ -80,7 +80,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 	function rootenv() {
 		var env = function env(key, value) {
-			if (value !== undefined) return map[key] = value;else if (typeof key !== 'string') return key;else if (key[0] === '"') return key.substr(1);else if (map[key] !== undefined) return map[key];else throw 'undefined variable `' + key + '`!';
+			if (arguments.length > 1) return map[key] = value;else if (typeof key !== 'string') return key;else if (key[0] === '"') return key.substr(1);else if (key in map) return map[key];else throw 'undefined variable `' + key + '`!';
 		};
 		var map = {
 

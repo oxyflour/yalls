@@ -62,9 +62,7 @@
 		return token('BINOP2', m);
 	}], [/>=|<=|==|>|<|~=/, function (m) {
 		return token('BINOP3', m);
-	}], [/and|or|is|as/, function (m) {
-		return token('BINOP4', m);
-	}], [/if|elseif|then|else|func|for|do|end|return/, function (m) {
+	}], [/if|elseif|then|else|func|for|do|end|and|or|return/, function (m) {
 		return token(m, m);
 	}], [/[a-zA-Z\$_]+\d*\w*/, function (m) {
 		return token('ID', m);
@@ -164,8 +162,6 @@
 		return l.concat([e]);
 	}], ['exp', ['NUM']], ['exp', ['STR']], ['exp', ['function']], ['exp', ['prefix']], ['exp', ['tableconst']], ['exp', ['UNOP', 'exp'], function (o, e) {
 		return [o, e];
-	}], ['exp', ['exp', 'BINOP4', 'exp'], function (e1, o, e2) {
-		return [o, e1, e2];
 	}], ['exp', ['exp', 'BINOP3', 'exp'], function (e1, o, e2) {
 		return [o, e1, e2];
 	}], ['exp', ['exp', 'BINOP2', 'exp'], function (e1, o, e2) {
@@ -174,6 +170,10 @@
 		return [o, e1, e2];
 	}], ['exp', ['exp', 'BINOP0', 'exp'], function (e1, o, e2) {
 		return [o, e1, e2];
+	}], ['exp', ['exp', 'and', 'exp'], function (e1, o, e2) {
+		return ['let', '$$', e1, ['cond', '$$', e2, '$$']];
+	}], ['exp', ['exp', 'or', 'exp'], function (e1, o, e2) {
+		return ['let', '$$', e1, ['cond', '$$', '$$', e2]];
 	}], ['setlist', ['variable'], function (v) {
 		return [v];
 	}], ['setlist', ['setlist', ',', 'variable'], function (l, _c, v) {
@@ -222,11 +222,12 @@
 
 	var precedence = {
 		UNOP: [20, 'right'],
-		BINOP4: [10, 'left'],
 		BINOP3: [11, 'left'],
 		BINOP2: [12, 'left'],
 		BINOP1: [13, 'left'],
 		BINOP0: [14, 'right'],
+		and: [10, 'left'],
+		or: [10, 'left'],
 		'(': [1, 'right'],
 		'=': [1, 'right']
 	};

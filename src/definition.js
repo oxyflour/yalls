@@ -64,10 +64,8 @@ var actions = [
 		m => token('BINOP2', m)],
 	[/>=|<=|==|>|<|~=/,
 		m => token('BINOP3', m)],
-	[/and|or|is|as/,
-		m => token('BINOP4', m)],
 
-	[/if|elseif|then|else|func|for|do|end|return/,
+	[/if|elseif|then|else|func|for|do|end|and|or|return/,
 		m => token(m, m)],
 
 	[/[a-zA-Z\$_]+\d*\w*/,
@@ -215,8 +213,6 @@ var grammars = [
 	['exp', ['tableconst']],
 	['exp', ['UNOP', 'exp'],
 		(o, e) => [o, e]],
-	['exp', ['exp', 'BINOP4', 'exp'],
-		(e1, o, e2) => [o, e1, e2]],
 	['exp', ['exp', 'BINOP3', 'exp'],
 		(e1, o, e2) => [o, e1, e2]],
 	['exp', ['exp', 'BINOP2', 'exp'],
@@ -225,6 +221,10 @@ var grammars = [
 		(e1, o, e2) => [o, e1, e2]],
 	['exp', ['exp', 'BINOP0', 'exp'],
 		(e1, o, e2) => [o, e1, e2]],
+	['exp', ['exp', 'and', 'exp'],
+		(e1, o, e2) => ['let', '$$', e1, ['cond', '$$', e2, '$$']]],
+	['exp', ['exp', 'or', 'exp'],
+		(e1, o, e2) => ['let', '$$', e1, ['cond', '$$', '$$', e2]]],
 
 	['setlist', ['variable'],
 		(v) => [v]],
@@ -292,11 +292,12 @@ var grammars = [
 
 var precedence = {
 	UNOP: [20, 'right'],
-	BINOP4: [10, 'left'],
 	BINOP3: [11, 'left'],
 	BINOP2: [12, 'left'],
 	BINOP1: [13, 'left'],
 	BINOP0: [14, 'right'],
+	and: [10, 'left'],
+	or: [10, 'left'],
 	'(': [1, 'right'],
 	'=': [1, 'right'],
 }
