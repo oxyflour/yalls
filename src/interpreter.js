@@ -80,14 +80,10 @@ function evaluate(exp, env) {
 	else if (head === LAMBDA)
 		return closure(exp, env)
 	else if (Array.isArray(exp))
-		return apply(evaluate(exp[0], env),
-			exp.slice(1).map(e => evaluate(e, env)))
+		return evaluate(exp[0], env)
+			.apply(exp.slice(1).map(e => evaluate(e, env)))
 	else
 		return env(exp)
-}
-
-function apply(func, args) {
-	return func.apply(null, args)
 }
 
 function rootenv() {
@@ -196,23 +192,7 @@ function rootenv() {
 			}
 			return d
 		},
-
-		/*
-		 * some sample functions
-		 *
-		'cons': (a, b) => [a, b],
-		'car': (a) => a[0],
-		'cdr': (a) => a[1],
-		'list': () => Array.prototype.slice.call(arguments)
-			.reduceRight((l, a) => [a, l], [ ]),
-		'map': (l, f) => l.length === 0 ? [ ] :
-			[apply(f, [ l[0] ]), apply(map.map, [ l[1], f ])],
-
-		'array': () => Array.prototype.slice.call(arguments),
-		'array-map': (a, f) => a.map((v, i) => apply(f, [v, i])),
-
-		'*2': closure([LAMBDA, 'x', ['*', 'x', 2]], env),
-		*/
+		
 	}
 	return env
 }

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "babel src --out-dir build && node build-table.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha"
   },
   "repository": {
     "type": "git",
@@ -26,6 +26,7 @@
     "yajily": "latest"
   },
   "devDependencies": {
+    "mocha":"latest",
     "babel": "latest",
     "babel-core": "latest"
   }
