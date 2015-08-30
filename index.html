@@ -173,7 +173,7 @@ function execute() {
 	}
 }
 
-var env = evaluate.rootenv()
+var env = evaluate.environment()
 // inject function
 env('print', function() {
 	$('#result').append('<pre>' +

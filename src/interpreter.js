@@ -47,11 +47,14 @@ function evalCond(exp, env) {
 }
 
 function environment(parent) {
-	var map = { }
+	var local = { }
 	return function(key, value) {
-		return arguments.length > 1 ?
-			(map[key] = value) :
-			(key in map ? map[key] : parent(key))
+		if (arguments.length > 1)
+			return local[key] = value
+		else if (key in local)
+			return local[key]
+		else
+			return parent(key)
 	}
 }
 
@@ -66,40 +69,46 @@ function closure(lambda, env) {
 }
 
 function evaluate(exp, env) {
-	var head = exp[0]
-	if (head === LET)
-		return evalLet(exp, env)
-	else if (head === LETREC)
-		return evalLetrec(exp, env)
-	else if (head === SET)
-		return evalSet(exp, env)
-	else if (head === IF || head === COND)
-		return evalCond(exp, env)
-
-	// core evaluation
-	else if (head === LAMBDA)
-		return closure(exp, env)
-	else if (Array.isArray(exp))
-		return evaluate(exp[0], env)
-			.apply(null, exp.slice(1).map(e => evaluate(e, env)))
-	else
-		return env(exp)
+	if (Array.isArray(exp)) {
+		var head = exp[0]
+		if (head === LET)
+			return evalLet(exp, env)
+		else if (head === LETREC)
+			return evalLetrec(exp, env)
+		else if (head === SET)
+			return evalSet(exp, env)
+		else if (head === IF || head === COND)
+			return evalCond(exp, env)
+		else if (head === LAMBDA)
+			return closure(exp, env)
+		else
+			return evaluate(exp[0], env).apply(env('this'),
+				exp.slice(1).map(e => evaluate(e, env)))
+	}
+	else if (typeof(exp) === 'string') {
+		if (exp[0] === '"')
+			return exp.substr(1)
+		else
+			return env(exp)
+	}
+	else {
+		// there is no undefined in the language
+		if (exp === undefined)
+			return null
+		else
+			return exp
+	}
 }
 
 function rootenv() {
-	var env = function(key, value) {
-		if (arguments.length > 1)
-			return map[key] = value
-		else if (typeof(key) !== 'string')
-			return key
-		else if (key[0] === '"')
-			return key.substr(1)
-		else if (key in map)
-			return map[key]
-		else
-			throw('undefined variable `' + key + '`!')
+	var env = function(key) {
+		if (key in local)
+			return local[key]
+		throw('undefined variable `' + key + '`!')
 	}
-	var map = {
+	var local = {
+
+		'this': { },
 
 		'nil': null,
 
@@ -171,12 +180,24 @@ function rootenv() {
 			}
 		},
 
+		'seek': function(o, k) {
+			while(o && !(k in o))
+				o = o.proto
+			return o && o[k]
+		},
+
 		'.': function(o, k, v) {
-			return v !== undefined ? (o[k] = v, o) : o[k]
+			return arguments.length > 2 ? (o[k] = v, o) : local.seek(o, k)
 		},
 
 		':': function(o, k) {
-			return o[k].apply(o, Array.prototype.slice.call(arguments).slice(2))
+			var f, a = Array.prototype.slice.call(arguments).slice(2)
+			if (f = local.seek(o, k))
+				return f.apply(o, a)
+			else if (f = local.seek(o, 'methodMissing'))
+				return f.call(o, k, a)
+			else
+				throw 'method "' + k + '" is missing on object'
 		},
 
 		'array': function() {
@@ -197,8 +218,9 @@ function rootenv() {
 	return env
 }
 
-evaluate.rootenv = rootenv
-evaluate.environment = environment
+evaluate.environment = function(parent) {
+	return environment(parent || rootenv())
+}
 
 if (typeof(module) !== 'undefined')
 	module.exports = evaluate

@@ -26,7 +26,7 @@ var assert = require('assert'),
 	tree = parse(tokens, definition.grammars, table, definition.precedence),
 	code = compile(tree)
 
-var env = evaluate.rootenv()
+var env = evaluate.environment()
 env('describe', describe)
 env('assert', assert)
 env('it', it)
