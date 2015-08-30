@@ -81,7 +81,7 @@ function evaluate(exp, env) {
 		return closure(exp, env)
 	else if (Array.isArray(exp))
 		return evaluate(exp[0], env)
-			.apply(exp.slice(1).map(e => evaluate(e, env)))
+			.apply(null, exp.slice(1).map(e => evaluate(e, env)))
 	else
 		return env(exp)
 }

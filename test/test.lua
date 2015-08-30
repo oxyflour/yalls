@@ -27,21 +27,21 @@ end)
 
 describe('functions', func()
 	it('should define and call function', func()
-		func f1(a) return a * a end
-		assert:equal(f1(10), 100)
+		func f1(x) return x * x end
+		assert:equal(f1(2), 4)
 	end)
 
 	it('should define and call lambda', func()
-		f2 = func(a) return a * a end
-		assert:equal(f2(10), 100)
+		f2 = func(x) return x * x end
+		assert:equal(f2(3), 9)
 	end)
 
 	it('should define and call closure', func()
-		f3 = func(a)
-			func f4() return a * a end
+		f3 = func(x)
+			func f4() return x * x end
 			return f4()
 		end
-		assert:equal(f3(10), 100)
+		assert:equal(f3(4), 16)
 	end)
 
 end)
