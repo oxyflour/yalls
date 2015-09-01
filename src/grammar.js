@@ -286,10 +286,10 @@ var precedence = {
 	BINOP0: [14, 'right'],
 	and: [10, 'left'],
 	or: [10, 'left'],
-	'=': [2, 'right'],
-	'.': [5, 'left'],
 	'[': [5, 'right'],
-	')': [2, 'right'],
+	'.': [5, 'left'],
+	'=': [2, 'right'],
+	')': [2, 'left'],
 	',': [2, 'left'],
 	'NEWLINE': [1, 'left'],
 }
@@ -300,10 +300,15 @@ function build() {
 	return yajily.parse.build(grammars)
 }
 
+function recover(token) {
+	if (token && token.type === 'NEWLINE')
+		return true
+}
+
 function parse(input, table) {
 	line = col = 1
 	var tokens = yajily.lex(input, actions),
-		tree = yajily.parse(tokens, grammars, table, precedence)
+		tree = yajily.parse(tokens, grammars, table, precedence, recover)
 	return tree
 }
 
