@@ -221,6 +221,8 @@
 		return ['array'];
 	}], ['arrayconst', ['[', 'explist', ']'], function (_l, l, _r) {
 		return ['array'].concat(l);
+	}], ['arrayconst', ['[', 'explist', ',', ']'], function (_l, l, _r) {
+		return ['array'].concat(l);
 	}]];
 
 	var precedence = {

@@ -275,7 +275,9 @@ var grammars = [
 	['arrayconst', ['[', ']'],
 		(_) => ['array']],
 	['arrayconst', ['[', 'explist', ']'],
-		(_l, l, _r) => ['array'].concat(l)]
+		(_l, l, _r) => ['array'].concat(l)],
+	['arrayconst', ['[', 'explist', ',', ']'],
+		(_l, l, _r) => ['array'].concat(l)],
 ]
 
 var precedence = {
