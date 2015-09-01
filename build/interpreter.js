@@ -155,11 +155,6 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 				return a === b;
 			},
 
-			'print': function print() {
-				console.log.apply(console, arguments);
-				return arguments[arguments.length - 1];
-			},
-
 			'begin': function begin() {
 				return arguments[arguments.length - 1];
 			},
@@ -236,14 +231,20 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			},
 
 			'dict': function dict() {
-				var d = {},
+				var k = [],
+				    v = [],
+				    d = {},
 				    j = 0;
 				for (var i = 0; i < arguments.length; i += 2) {
-					var k = arguments[i],
-					    v = arguments[i + 1];
-					d[k === null ? j++ : k] = v;
+					var x = arguments[i],
+					    y = arguments[i + 1];
+					k.push(x);
+					v.push(y);
+					d[x !== null ? x : j++] = y;
 				}
-				return d;
+				return k.every(function (i) {
+					return i === null;
+				}) ? v : d;
 			}
 
 		};

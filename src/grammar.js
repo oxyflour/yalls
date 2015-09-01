@@ -138,6 +138,13 @@ var grammars = [
 	['cstmt', ['cstmt', 'NEWLINE']],
 
 	['stmt', ['exp']],
+	['stmt', ['fn', 'fnname', 'pars', 'block', 'end'], (_func, a, p, b, _end) => {
+		var f = ['lambda'].concat(p).concat([b])
+		if (Array.isArray(a) && a[0] === '.')
+			return ['.', a[1], a[2], f]
+		else
+			return ['set', a, f]
+	}],
 	['stmt', ['varlist', '=', 'explist'], (li, _eq, le) => {
 		var set = ['set']
 		li.forEach((_, i) => {
@@ -155,28 +162,9 @@ var grammars = [
 		return set
 	}],
 
-	['varlist', ['variable'],
-		(v) => [v]],
-	['varlist', ['varlist', ',', 'variable'],
-		(l, _c, v) => l.concat(v)],
-
-	['idlist', ['ID'],
-		(v) => [v]],
-	['idlist', ['idlist', ',', 'ID'],
-		(l, _c, v) => l.concat(v)],
-
-	['explist', ['exp'],
-		(e) => [e]],
-	['explist', ['explist', ',', 'exp'],
-		(l, _c, e) => l.concat([e])],
-
-	['variable', ['ID']],
-	['variable', ['primary', '[', 'exp', ']'],
-		(p, _l, e, _r) => ['.', p, e]],
-	['variable', ['primary', '.', 'ID'],
-		(p, _dot, i) => ['.', p, token('STR', i.value)]],
-
 	['exp', ['primary']],
+	['exp', ['primary', 'explist'],
+		(f, a) => (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a)],
 	['exp', ['UNOP', 'exp'],
 		(o, e) => [o, e]],
 	['exp', ['(', 'BINOP2', 'exp', ')'],
@@ -214,6 +202,35 @@ var grammars = [
 		(f, a) => (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a)],
 	['primary', ['fn', 'pars', 'block', 'end'],
 		(_func, p, b, _end) => ['lambda'].concat(p).concat([b])],
+	['primary', ['fn', '[', 'block', ']'],
+		(_func, _l, b, _r) => ['lambda', 'x', 'y', 'z', 'u', 'v', 'w'].concat([b])],
+
+	['varlist', ['variable'],
+		(v) => [v]],
+	['varlist', ['varlist', ',', 'variable'],
+		(l, _c, v) => l.concat(v)],
+
+	['idlist', ['ID'],
+		(v) => [v]],
+	['idlist', ['idlist', ',', 'ID'],
+		(l, _c, v) => l.concat(v)],
+
+	['explist', ['exp'],
+		(e) => [e]],
+	['explist', ['explist', ',', 'exp'],
+		(l, _c, e) => l.concat([e])],
+
+	['fnname', ['ID']],
+	['fnname', ['fnname', '[', 'exp', ']'],
+		(p, _l, e, _r) => ['.', p, e]],
+	['fnname', ['fnname', '.', 'ID'],
+		(p, _dot, i) => ['.', p, token('STR', i.value)]],
+
+	['variable', ['ID']],
+	['variable', ['primary', '[', 'exp', ']'],
+		(p, _l, e, _r) => ['.', p, e]],
+	['variable', ['primary', '.', 'ID'],
+		(p, _dot, i) => ['.', p, token('STR', i.value)]],
 
 	// parameters
 	['pars', ['(', ')'],
@@ -251,7 +268,6 @@ var grammars = [
 	['literal', ['nil']],
 	['literal', ['self']],
 	['literal', ['tableconst']],
-	['literal', ['arrayconst']],
 
 	// table constructor
 	['tableconst', ['{', '}'],
@@ -269,29 +285,28 @@ var grammars = [
 		(e) => [null, e]],
 	['field', ['ID', ':', 'exp'],
 		(i, _eq, e) => [token('STR', i.value, ''), e]],
+	['field', ['NUM', ':', 'exp'],
+		(i, _eq, e) => [token('STR', i.value, ''), e]],
+	['field', ['STR', ':', 'exp'],
+		(i, _eq, e) => [i, e]],
 	['field', ['[', 'exp', ']', ':', 'exp'],
 		(_l, e1, _r, _eq, e2) => [e1, e2]],
-
-	['arrayconst', ['[', ']'],
-		(_) => ['array']],
-	['arrayconst', ['[', 'explist', ']'],
-		(_l, l, _r) => ['array'].concat(l)],
-	['arrayconst', ['[', 'explist', ',', ']'],
-		(_l, l, _r) => ['array'].concat(l)],
 ]
 
 var precedence = {
 	UNOP: [20, 'right'],
-	BINOP3: [11, 'left'],
-	BINOP2: [12, 'left'],
-	BINOP1: [13, 'left'],
+	'(': [15, 'right'],
+	')': [15, 'left'],
+	'[': [15, 'right'],
+	']': [15, 'left'],
 	BINOP0: [14, 'right'],
+	BINOP1: [13, 'left'],
+	BINOP2: [12, 'left'],
+	BINOP3: [11, 'left'],
 	and: [10, 'left'],
 	or: [10, 'left'],
-	'[': [5, 'right'],
 	'.': [5, 'left'],
 	'=': [2, 'right'],
-	')': [2, 'left'],
 	',': [2, 'left'],
 	'NEWLINE': [1, 'left'],
 }

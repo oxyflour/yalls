@@ -4,112 +4,131 @@
 
 --]]
 
-describe('variables', fn()
-	it('should set one single variable', fn()
+describe('variables', fn[
+	it('should set one single variable', fn[
 		a = 1
 		assert.equal(a, 1)
-	end)
+	])
 
-	it('should set some variables', fn()
+	it('should set some variables', fn[
 		b, c = 2, 3
 		assert.equal(b, 2)
 		assert.equal(c, 3)
-	end)
+	])
 
-	it('should swap variables', fn()
+	it('should swap variables', fn[
 		b, c = 2, 3
 		c, b = b, c
 		assert.equal(b, 3)
 		assert.equal(c, 2)
-	end)
+	])
 
-end)
+])
 
-describe('functions', fn()
-	it('should define and call lambda', fn()
+describe('functions', fn[
+	it('should define and call function', fn[
+		fn f1(x) x * x end
+		assert.equal(f1(3), 9)
+		assert.equal((f1 3), 9)
+		assert.equal (f1 3), 9
+	])
+
+	it('should define and call recursive function', fn[
+		fn frac(x)
+			if x > 1 then x * frac(x - 1) else 1 end
+		end
+		assert.equal(frac(6), 720)
+	])
+
+	it('should define and call lambda', fn[
 		f2 = fn(x) x * x end
 		assert.equal(f2(3), 9)
-	end)
+		f2 = fn[x * x]
+		assert.equal(f2(3), 9)
+	])
 
-	it('should define and call closure', fn()
-		f3 = fn(x)
+	it('should define and call closure', fn[
+		f3 = fn[
 			f4 = fn() x * x end
 			f4()
-		end
+		]
 		assert.equal(f3(4), 16)
-	end)
+	])
 
-end)
+])
 
-describe('dict (table)', fn()
-	d = { 1, 2, k: 'v', 3 }
+describe('dict (table)', fn[
+	k3 = 'k3'
+	d = { 1, 1:2, k:'v', 'k2':'v2', [k3]:'v3' }
 
-	it('should create a dict', fn()
+	it('should create a dict', fn[
 		assert.equal(d[0], 1)
 		assert.equal(d[1], 2)
-		assert.equal(d[2], 3)
 		assert.equal(d.k, 'v')
 		assert.equal(d['k'], 'v')
-	end)
+		assert.equal(d.k2, 'v2')
+		assert.equal(d.k3, 'v3')
+	])
 
-	it('should set dict member', fn()
+	it('should set dict member', fn[
 		d.k = 'v2'
 		assert.equal(d.k, 'v2')
-		assert.equal(d['k'], 'v2')
-	end)
+	])
 
-	it('should set nested dict member', fn()
+	it('should set nested dict member', fn[
 		d.d = { }
 		d.d.k = 'v3'
 		assert.equal(d.d.k, 'v3')
 		assert.equal(d['d']['k'], 'v3')
-	end)
+	])
 
-	it('should set nested dict method', fn()
-		d.m = fn() self.k end
+	it('should set nested dict method', fn[
+		d.m = fn[self.k]
 		assert.equal(d.m(), 'v2')
-	end)
+		fn d.m2() self.k end
+		assert.equal(d.m2(), 'v2')
+	])
 
-end)
+])
 
-describe('array', fn()
-	a = array(1, 2, 3)
+describe('array', fn[
+	a = {1, 2, 3}
 
-	it('should create an array', fn()
+	it('should create an array', fn[
 		assert.equal(a[0], 1)
 		assert.equal(a[1], 2)
 		assert.equal(a[2], 3)
-	end)
+	])
 
-	s = a.map(fn(i) i * i end)
+	s = a.map(fn[x * x])
 	
-	it('should do map over an array', fn()
+	it('should do map over an array', fn[
 		assert.equal(s[0], 1)
 		assert.equal(s[1], 4)
 		assert.equal(s[2], 9)
-	end)
+	])
 
-end)
+])
 
-describe('if/else/elseif statements', fn()
-	it('should assert if', fn()
+describe('if/else/elseif statements', fn[
+	it('should assert if', fn[
 		if 1 then
 			assert.ok(1)
 		end
 		if 0 then
 			assert.ok(0)
 		end
-	end)
+	])
 
-	it('should assert else', fn()
+	it('should assert else', fn[
 		if 0 then
 			assert.ok(0)
 		else
 			assert.ok(1)
 		end
-	end)
+	])
 
-	it('should assert elseif', fn()
+	it('should assert elseif', fn[
 		if 0 then
 			assert.ok(0)
 		elseif 1 then
@@ -117,51 +136,50 @@ describe('if/else/elseif statements', fn()
 		else
 			assert.ok(0)
 		end
-	end)
+	])
 
-	it('should assert elseif2', fn()
+	it('should assert elseif2', fn[
 		if 0 then
 			assert.ok(0)
 		elseif 1 then
 			assert.ok(1)
 		end
-	end)
-end)
+	])
+])
 
-describe('for statements', fn()
-	it('should loop over [1, 5)', fn()
+describe('for statements', fn[
+	it('should loop over [1, 5)', fn[
 		a = array()
 		for i = 1, 5 do a.push(i) end
 		assert.equal(a.length, 4)
 		assert.deepEqual(a, array(1, 2, 3, 4))
-	end)
+	])
 
-	it('should loop over 1, 3', fn()
+	it('should loop over 1, 3', fn[
 		a = array()
 		for i = 1, 2, 4 do a.push(i) end
 		assert.equal(a.length, 2)
 		assert.deepEqual(a, array(1, 3))
-	end)
+	])
 
-	it('should loop over [0, 5)', fn()
+	it('should loop over [0, 5)', fn[
 		a = array()
 		for i = range(5) do a.push(i) end
 		assert.equal(a.length, 5)
 		assert.deepEqual(a, array(0, 1, 2, 3, 4))
-	end)
+	])
 
-	it('should loop over a dict', fn()
+	it('should loop over a dict', fn[
 		d = { }
-		for v, k = pair({ k:'v', 'v2' }) do d[k] = v end
+		for v, k = pair({ k:'v', '0':'v2' }) do d[k] = v end
 		assert.equal(d.k, 'v')
 		assert.equal(d[0], 'v2')
-	end)
+	])
 
-	it('should loop over an array', fn()
+	it('should loop over an array', fn[
 		a = array()
 		for v, i = ipair(array(1, 2, 3)) do a.push(v + '.' + i) end
 		assert.equal(a.length, 3)
 		assert.deepEqual(a, array('1.0', '2.1', '3.2'))
-	end)
-
-end)
+	])
+])

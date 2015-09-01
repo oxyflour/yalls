@@ -77,7 +77,7 @@ function execute() {
 
 var env = evaluate.environment()
 // inject function
-env('print', function() {
+env('echo', function() {
 	$('#result').append('<pre>' +
 		Array.prototype.slice.call(arguments).join(' ') +
 	'</pre>')

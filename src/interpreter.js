@@ -158,11 +158,6 @@ function rootenv() {
 		'<=': (a, b) => a <= b,
 		'==': (a, b) => a === b,
 
-		'print': function() {
-			console.log.apply(console, arguments)
-			return arguments[arguments.length - 1]
-		},
-
 		'begin': function() {
 			return arguments[arguments.length - 1]
 		},
@@ -232,13 +227,15 @@ function rootenv() {
 		},
 
 		'dict': function() {
-			var d = { }, j = 0
+			var k = [ ], v = [ ], d = { }, j = 0
 			for (var i = 0; i < arguments.length; i += 2) {
-				var k = arguments[i],
-					v = arguments[i + 1]
-				d[ k === null ? (j ++) : k ] = v
+				var x = arguments[i],
+					y = arguments[i + 1]
+				k.push(x)
+				v.push(y)
+				d[ x !== null ? x : (j++) ] = y
 			}
-			return d
+			return k.every(i => i === null) ? v : d
 		},
 		
 	}

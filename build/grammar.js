@@ -100,7 +100,10 @@
 		return ['begin', s];
 	}], ['stmtlist', ['stmtlist', 'cstmt'], function (l, s) {
 		return l.concat([s]);
-	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']], ['stmt', ['varlist', '=', 'explist'], function (li, _eq, le) {
+	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']], ['stmt', ['fn', 'fnname', 'pars', 'block', 'end'], function (_func, a, p, b, _end) {
+		var f = ['lambda'].concat(p).concat([b]);
+		if (Array.isArray(a) && a[0] === '.') return ['.', a[1], a[2], f];else return ['set', a, f];
+	}], ['stmt', ['varlist', '=', 'explist'], function (li, _eq, le) {
 		var set = ['set'];
 		li.forEach(function (_, i) {
 			var a = li[i],
@@ -115,23 +118,9 @@
 			}
 		});
 		return set;
-	}], ['varlist', ['variable'], function (v) {
-		return [v];
-	}], ['varlist', ['varlist', ',', 'variable'], function (l, _c, v) {
-		return l.concat(v);
-	}], ['idlist', ['ID'], function (v) {
-		return [v];
-	}], ['idlist', ['idlist', ',', 'ID'], function (l, _c, v) {
-		return l.concat(v);
-	}], ['explist', ['exp'], function (e) {
-		return [e];
-	}], ['explist', ['explist', ',', 'exp'], function (l, _c, e) {
-		return l.concat([e]);
-	}], ['variable', ['ID']], ['variable', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
-		return ['.', p, e];
-	}], ['variable', ['primary', '.', 'ID'], function (p, _dot, i) {
-		return ['.', p, token('STR', i.value)];
-	}], ['exp', ['primary']], ['exp', ['UNOP', 'exp'], function (o, e) {
+	}], ['exp', ['primary']], ['exp', ['primary', 'explist'], function (f, a) {
+		return (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a);
+	}], ['exp', ['UNOP', 'exp'], function (o, e) {
 		return [o, e];
 	}], ['exp', ['(', 'BINOP2', 'exp', ')'], function (_l, o, e2, _r) {
 		return [o, e2];
@@ -165,6 +154,28 @@
 		return (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a);
 	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_func, p, b, _end) {
 		return ['lambda'].concat(p).concat([b]);
+	}], ['primary', ['fn', '[', 'block', ']'], function (_func, _l, b, _r) {
+		return ['lambda', 'x', 'y', 'z', 'u', 'v', 'w'].concat([b]);
+	}], ['varlist', ['variable'], function (v) {
+		return [v];
+	}], ['varlist', ['varlist', ',', 'variable'], function (l, _c, v) {
+		return l.concat(v);
+	}], ['idlist', ['ID'], function (v) {
+		return [v];
+	}], ['idlist', ['idlist', ',', 'ID'], function (l, _c, v) {
+		return l.concat(v);
+	}], ['explist', ['exp'], function (e) {
+		return [e];
+	}], ['explist', ['explist', ',', 'exp'], function (l, _c, e) {
+		return l.concat([e]);
+	}], ['fnname', ['ID']], ['fnname', ['fnname', '[', 'exp', ']'], function (p, _l, e, _r) {
+		return ['.', p, e];
+	}], ['fnname', ['fnname', '.', 'ID'], function (p, _dot, i) {
+		return ['.', p, token('STR', i.value)];
+	}], ['variable', ['ID']], ['variable', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
+		return ['.', p, e];
+	}], ['variable', ['primary', '.', 'ID'], function (p, _dot, i) {
+		return ['.', p, token('STR', i.value)];
 	}],
 
 	// parameters
@@ -200,7 +211,7 @@
 	}],
 
 	// literal
-	['literal', ['NUM']], ['literal', ['STR']], ['literal', ['nil']], ['literal', ['self']], ['literal', ['tableconst']], ['literal', ['arrayconst']],
+	['literal', ['NUM']], ['literal', ['STR']], ['literal', ['nil']], ['literal', ['self']], ['literal', ['tableconst']],
 
 	// table constructor
 	['tableconst', ['{', '}'], function (t) {
@@ -215,28 +226,28 @@
 		return [null, e];
 	}], ['field', ['ID', ':', 'exp'], function (i, _eq, e) {
 		return [token('STR', i.value, ''), e];
+	}], ['field', ['NUM', ':', 'exp'], function (i, _eq, e) {
+		return [token('STR', i.value, ''), e];
+	}], ['field', ['STR', ':', 'exp'], function (i, _eq, e) {
+		return [i, e];
 	}], ['field', ['[', 'exp', ']', ':', 'exp'], function (_l, e1, _r, _eq, e2) {
 		return [e1, e2];
-	}], ['arrayconst', ['[', ']'], function (_) {
-		return ['array'];
-	}], ['arrayconst', ['[', 'explist', ']'], function (_l, l, _r) {
-		return ['array'].concat(l);
-	}], ['arrayconst', ['[', 'explist', ',', ']'], function (_l, l, _r) {
-		return ['array'].concat(l);
 	}]];
 
 	var precedence = {
 		UNOP: [20, 'right'],
-		BINOP3: [11, 'left'],
-		BINOP2: [12, 'left'],
-		BINOP1: [13, 'left'],
+		'(': [15, 'right'],
+		')': [15, 'left'],
+		'[': [15, 'right'],
+		']': [15, 'left'],
 		BINOP0: [14, 'right'],
+		BINOP1: [13, 'left'],
+		BINOP2: [12, 'left'],
+		BINOP3: [11, 'left'],
 		and: [10, 'left'],
 		or: [10, 'left'],
-		'[': [5, 'right'],
 		'.': [5, 'left'],
 		'=': [2, 'right'],
-		')': [2, 'left'],
 		',': [2, 'left'],
 		'NEWLINE': [1, 'left']
 	};
