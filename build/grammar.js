@@ -154,8 +154,8 @@
 		return b;
 	}], ['primary', ['if', 'conds', 'end'], function (_if, c) {
 		return ['cond'].concat(c);
-	}], ['primary', ['repetition', 'do', 'block', 'end'], function (r, _do, b, _end) {
-		return ['for', r[1], ['lambda'].concat(r[0]).concat([b])];
+	}], ['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'], function (_for, i, _eq, t, _do, b, _end) {
+		return ['for', t, ['lambda'].concat(i).concat([b])];
 	}], ['primary', ['primary', 'args'], function (f, a) {
 		return (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a);
 	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_func, p, b, _end) {
@@ -169,18 +169,20 @@
 		return d;
 	}],
 
-	// args
+	// function args
 	['args', ['(', ')'], function (d) {
 		return [];
 	}], ['args', ['(', 'explist', ')'], function (_l, d, _r) {
 		return d;
 	}],
 
-	// for
-	['repetition', ['for', 'ID', '=', 'explist'], function (_for, i, _eq, e) {
-		return [[i], e.length === 1 ? e[0] : ['range'].concat(e)];
-	}], ['repetition', ['for', 'idlist', '=', 'explist'], function (_for, l, _eq, e) {
-		return [l, e.length === 1 ? e[0] : ['range'].concat(e)];
+	// for iterator
+	['iterator', ['exp'], function (e) {
+		return e[0] === 'dict' ? ['pair', e] : e[0] === 'array' ? ['ipair', e] : e;
+	}], ['iterator', ['exp', ',', 'exp'], function (e1, _c, e2) {
+		return ['range', e1, e2];
+	}], ['iterator', ['exp', ',', 'exp', ',', 'exp'], function (e1, _c, e2, _c2, e3) {
+		return ['range', e1, e2, e3];
 	}],
 
 	// if

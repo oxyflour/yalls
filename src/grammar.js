@@ -201,8 +201,8 @@ var grammars = [
 		(_do, b, _end) => b],
 	['primary', ['if', 'conds', 'end'],
 		(_if, c) => ['cond'].concat(c)],
-	['primary', ['repetition', 'do', 'block', 'end'],
-		(r, _do, b, _end) => ['for', r[1], ['lambda'].concat(r[0]).concat([b])]],
+	['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'],
+		(_for, i, _eq, t, _do, b, _end) => ['for', t, ['lambda'].concat(i).concat([b])]],
 	['primary', ['primary', 'args'],
 		(f, a) => (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a)],
 	['primary', ['fn', 'pars', 'block', 'end'],
@@ -214,17 +214,19 @@ var grammars = [
 	['pars', ['(', 'idlist', ')'],
 		(_l, d, _r) => d],
 
-	// args
+	// function args
 	['args', ['(', ')'],
 		(d) => [ ]],
 	['args', ['(', 'explist', ')'],
 		(_l, d, _r) => d],
 
-	// for
-	['repetition', ['for', 'ID', '=', 'explist'],
-		(_for, i, _eq, e) => [[i], e.length === 1 ? e[0] : ['range'].concat(e)]],
-	['repetition', ['for', 'idlist', '=', 'explist'],
-		(_for, l, _eq, e) => [l, e.length === 1 ? e[0] : ['range'].concat(e)]],
+	// for iterator
+	['iterator', ['exp'],
+		(e) => e[0] === 'dict' ? ['pair', e] : (e[0] === 'array' ? ['ipair', e] : e)],
+	['iterator', ['exp', ',', 'exp'],
+		(e1, _c, e2) => ['range', e1, e2]],
+	['iterator', ['exp', ',', 'exp', ',', 'exp'],
+		(e1, _c, e2, _c2, e3) => ['range', e1, e2, e3]],
 
 	// if
 	['conds', ['condlist']],
