@@ -58,7 +58,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 	function closure(lambda, env) {
 		return function () {
 			var e = environment(env);
-			this && e('this', this);
+			this && e('self', this);
 			for (var i = 1; i < lambda.length - 1; i++) e(lambda[i], arguments[i - 1]);
 			return evaluate(lambda[lambda.length - 1], e);
 		};
@@ -67,7 +67,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 	function evaluate(exp, env) {
 		if (Array.isArray(exp)) {
 			var head = exp[0];
-			if (head === LET) return evalLet(exp, env);else if (head === LETREC) return evalLetrec(exp, env);else if (head === SET) return evalSet(exp, env);else if (head === IF || head === COND) return evalCond(exp, env);else if (head === LAMBDA) return closure(exp, env);else return evaluate(exp[0], env).apply(env('this'), exp.slice(1).map(function (e) {
+			if (head === LET) return evalLet(exp, env);else if (head === LETREC) return evalLetrec(exp, env);else if (head === SET) return evalSet(exp, env);else if (head === IF || head === COND) return evalCond(exp, env);else if (head === LAMBDA) return closure(exp, env);else return evaluate(exp[0], env).apply(env('self'), exp.slice(1).map(function (e) {
 				return evaluate(e, env);
 			}));
 		} else if (typeof exp === 'string') {
@@ -78,14 +78,14 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 		}
 	}
 
-	function rootenv() {
+	function rootenv(self) {
 		var env = function env(key) {
 			if (key in local) return local[key];
 			throw 'undefined variable `' + key + '`!';
 		};
 		var local = {
 
-			'this': {},
+			'self': self || {},
 
 			'nil': null,
 
@@ -138,8 +138,10 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			},
 
 			'for': function _for(iterator, func) {
-				var data = [];
-				while (data = iterator.apply(null, data)) func.apply(null, data);
+				var data = [],
+				    ret = [];
+				while (data = iterator.apply(null, data)) ret.push(func.apply(null, data));
+				return ret;
 			},
 
 			'range': function range() {

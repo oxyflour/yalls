@@ -61,7 +61,7 @@ function environment(parent) {
 function closure(lambda, env) {
 	return function() {
 		var e = environment(env)
-		this && e('this', this)
+		this && e('self', this)
 		for (var i = 1; i < lambda.length - 1; i ++)
 			e(lambda[i], arguments[i - 1])
 		return evaluate(lambda[lambda.length - 1], e)
@@ -82,7 +82,7 @@ function evaluate(exp, env) {
 		else if (head === LAMBDA)
 			return closure(exp, env)
 		else
-			return evaluate(exp[0], env).apply(env('this'),
+			return evaluate(exp[0], env).apply(env('self'),
 				exp.slice(1).map(e => evaluate(e, env)))
 	}
 	else if (typeof(exp) === 'string') {
@@ -100,7 +100,7 @@ function evaluate(exp, env) {
 	}
 }
 
-function rootenv() {
+function rootenv(self) {
 	var env = function(key) {
 		if (key in local)
 			return local[key]
@@ -108,7 +108,7 @@ function rootenv() {
 	}
 	var local = {
 
-		'this': { },
+		'self': self || { },
 
 		'nil': null,
 
@@ -139,9 +139,10 @@ function rootenv() {
 		},
 
 		'for': function(iterator, func) {
-			var data = [ ]
+			var data = [ ], ret = [ ]
 			while (data = iterator.apply(null, data))
-				func.apply(null, data)
+				ret.push(func.apply(null, data))
+			return ret
 		},
 
 		'range': function() {

@@ -1,4 +1,3 @@
-
 function compile(tree) {
 	if (Array.isArray(tree))
 		return tree.map(compile)
@@ -13,17 +12,14 @@ function compile(tree) {
 }
 
 var assert = require('assert'),
-	babelPolyfil = require('babel/polyfill'),
-	lex = require('yajily/build/lexer'),
-	parse = require('yajily/build/parser'),
+	babel = require('babel/polyfill'),
 
-	definition = require('../build/definition'),
+	grammar = require('../build/grammar'),
 	evaluate = require('../build/interpreter'),
 	table = require('../build/table.json'),
 
 	input = require('fs').readFileSync('test/test.lua'),
-	tokens = lex(input, definition.actions),
-	tree = parse(tokens, definition.grammars, table, definition.precedence),
+	tree = grammar.parse(input, table),
 	code = compile(tree)
 
 var env = evaluate.environment()
