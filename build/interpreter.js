@@ -78,14 +78,42 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 		}
 	}
 
-	function rootenv(self) {
+	function rootenv() {
 		var env = function env(key) {
 			if (key in local) return local[key];
 			throw 'undefined variable `' + key + '`!';
 		};
+
+		var self = {
+
+			$seek: function $seek(member) {
+				var object = this;
+				while (object && object[member] === undefined) object = object.$proto;
+				if (object) return object[member];
+			},
+
+			$call: function $call(object, member, args) {
+				var fn = self.$seek.call(object, member) || self[member];
+				return fn.apply(object, args);
+			},
+
+			$get: function $get(object, member) {
+				return self.$seek.call(object, member) || self[member];
+			},
+
+			derive: function derive() {
+				return { $proto: this };
+			},
+
+			print: function print() {
+				console.log(this);
+			}
+
+		};
+
 		var local = {
 
-			'self': self || {},
+			'self': self,
 
 			'nil': null,
 
@@ -190,19 +218,12 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 				};
 			},
 
-			'seek': function seek(o, k) {
-				while (o && !(k in o)) o = o.proto;
-				return o && o[k];
-			},
-
 			'.': function _(o, k, v) {
-				return arguments.length > 2 ? (o[k] = v, o) : local.seek(o, k);
+				return arguments.length > 2 ? (o[k] = v, o) : self.$get.call(o, o, k);
 			},
 
 			':': function _(o, k) {
-				var f,
-				    a = Array.prototype.slice.call(arguments).slice(2);
-				if (f = local.seek(o, k)) return f.apply(o, a);else if (f = local.seek(o, 'methodMissing')) return f.call(o, k, a);else throw 'method "' + k + '" is missing on object';
+				return self.$call.call(o, o, k, Array.prototype.slice.call(arguments).slice(2));
 			},
 
 			'array': function array() {

@@ -100,15 +100,45 @@ function evaluate(exp, env) {
 	}
 }
 
-function rootenv(self) {
+function rootenv() {
 	var env = function(key) {
 		if (key in local)
 			return local[key]
 		throw('undefined variable `' + key + '`!')
 	}
+
+	var self = {
+
+		$seek: function(member) {
+			var object = this
+			while (object && object[member] === undefined)
+				object = object.$proto
+			if (object)
+				return object[member]
+		},
+
+		$call: function(object, member, args) {
+			var fn = self.$seek.call(object, member) || self[member]
+			return fn.apply(object, args)
+		},
+
+		$get: function (object, member) {
+			return self.$seek.call(object, member) || self[member]
+		},
+
+		derive: function() {
+			return { $proto: this }
+		},
+
+		print: function() {
+			console.log(this)
+		},
+
+	}
+
 	var local = {
 
-		'self': self || { },
+		'self': self,
 
 		'nil': null,
 
@@ -181,24 +211,14 @@ function rootenv(self) {
 			}
 		},
 
-		'seek': function(o, k) {
-			while(o && !(k in o))
-				o = o.proto
-			return o && o[k]
-		},
-
 		'.': function(o, k, v) {
-			return arguments.length > 2 ? (o[k] = v, o) : local.seek(o, k)
+			return arguments.length > 2 ?
+				(o[k] = v, o) : self.$get.call(o, o, k)
 		},
 
 		':': function(o, k) {
-			var f, a = Array.prototype.slice.call(arguments).slice(2)
-			if (f = local.seek(o, k))
-				return f.apply(o, a)
-			else if (f = local.seek(o, 'methodMissing'))
-				return f.call(o, k, a)
-			else
-				throw 'method "' + k + '" is missing on object'
+			return self.$call.call(o, o, k,
+				Array.prototype.slice.call(arguments).slice(2))
 		},
 
 		'array': function() {

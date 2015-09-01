@@ -83,7 +83,7 @@ describe('array', fn()
 
 	s = a.map(fn(i) i * i end)
 	
-	it('should create an array', fn()
+	it('should do map over an array', fn()
 		assert.equal(s[0], 1)
 		assert.equal(s[1], 4)
 		assert.equal(s[2], 9)

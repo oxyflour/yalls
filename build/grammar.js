@@ -87,17 +87,17 @@
 		return count(m);
 	}]];
 
-	var grammars = [['S', ['block']], ['block', ['cstmt']], ['block', ['stmt'], function (s) {
+	var grammars = [['S', ['block']], ['block', ['body']], ['block', ['newlines', 'body'], function (_n, b) {
+		return b;
+	}], ['body', ['stmt'], function (s) {
 		return ['begin', s];
-	}], ['cstmt', ['NEWLINE'], function (n) {
-		return ['begin'];
-	}], ['cstmt', ['stmt', 'NEWLINE'], function (s) {
-		return ['begin', s];
-	}], ['cstmt', ['NEWLINE', 'stmt'], function (_n, s) {
-		return ['begin', s];
-	}], ['cstmt', ['cstmt', 'NEWLINE', 'stmt'], function (l, _n, s) {
+	}], ['body', ['stmtlist']], ['body', ['stmtlist', 'stmt'], function (l, s) {
 		return l.concat([s]);
-	}], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']], ['stmt', ['varlist', '=', 'explist'], function (li, _eq, le) {
+	}], ['newlines', ['NEWLINE']], ['newlines', ['newlines', 'NEWLINE']], ['stmtlist', ['cstmt'], function (s) {
+		return ['begin', s];
+	}], ['stmtlist', ['stmtlist', 'cstmt'], function (l, s) {
+		return l.concat([s]);
+	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']], ['stmt', ['varlist', '=', 'explist'], function (li, _eq, le) {
 		var set = ['set'];
 		li.forEach(function (_, i) {
 			var a = li[i],
@@ -114,7 +114,7 @@
 		return set;
 	}], ['varlist', ['variable'], function (v) {
 		return [v];
-	}], ['varlist', ['varlist', ',', 'ID'], function (l, _c, v) {
+	}], ['varlist', ['varlist', ',', 'variable'], function (l, _c, v) {
 		return l.concat(v);
 	}], ['idlist', ['ID'], function (v) {
 		return [v];
@@ -162,7 +162,7 @@
 		return ['lambda'].concat(p).concat([b]);
 	}],
 
-	// args
+	// parameters
 	['pars', ['(', ')'], function (d) {
 		return [];
 	}], ['pars', ['(', 'idlist', ')'], function (_l, d, _r) {

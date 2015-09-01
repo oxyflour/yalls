@@ -111,18 +111,25 @@ var grammars = [
 
 	['S', ['block']],
 
-	['block', ['cstmt']],
-	['block', ['stmt'],
-		(s) => ['begin', s]],
+	['block', ['body']],
+	['block', ['newlines', 'body'],
+		(_n, b) => b],
 
-	['cstmt', ['NEWLINE'],
-		(n) => ['begin']],
-	['cstmt', ['stmt', 'NEWLINE'],
+	['body', ['stmt'],
 		(s) => ['begin', s]],
-	['cstmt', ['NEWLINE', 'stmt'],
-		(_n, s) => ['begin', s]],
-	['cstmt', ['cstmt', 'NEWLINE', 'stmt'],
-		(l, _n, s) => l.concat([s])],
+	['body', ['stmtlist']],
+	['body', ['stmtlist', 'stmt'],
+		(l, s) => l.concat([s])],
+
+	['newlines', ['NEWLINE']],
+	['newlines', ['newlines', 'NEWLINE']],
+
+	['stmtlist', ['cstmt'],
+		(s) => ['begin', s]],
+	['stmtlist', ['stmtlist', 'cstmt'],
+		(l, s) => l.concat([s])],
+
+	['cstmt', ['stmt', 'NEWLINE']],
 	['cstmt', ['cstmt', 'NEWLINE']],
 
 	['stmt', ['exp']],
@@ -145,7 +152,7 @@ var grammars = [
 
 	['varlist', ['variable'],
 		(v) => [v]],
-	['varlist', ['varlist', ',', 'ID'],
+	['varlist', ['varlist', ',', 'variable'],
 		(l, _c, v) => l.concat(v)],
 
 	['idlist', ['ID'],
@@ -201,7 +208,7 @@ var grammars = [
 	['primary', ['fn', 'pars', 'block', 'end'],
 		(_func, p, b, _end) => ['lambda'].concat(p).concat([b])],
 
-	// args
+	// parameters
 	['pars', ['(', ')'],
 		(d) => [ ]],
 	['pars', ['(', 'idlist', ')'],
