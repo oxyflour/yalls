@@ -43,7 +43,6 @@ function evalCond(exp, env) {
 	for (var i = 1; i < exp.length - 1; i += 2)
 		if (evaluate(exp[i], env))
 			return evaluate(exp[i + 1], env)
-	return evaluate(exp[exp.length - 1], env)
 }
 
 function environment(parent) {
@@ -166,6 +165,13 @@ function rootenv() {
 
 		'begin': function() {
 			return arguments[arguments.length - 1]
+		},
+
+		'while': function(test, func) {
+			var ret
+			while (test())
+				ret = func()
+			return ret
 		},
 
 		'for': function(iterator, func) {

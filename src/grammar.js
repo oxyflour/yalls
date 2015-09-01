@@ -65,7 +65,7 @@ var actions = [
 	[/>=|<=|==|>|<|~=/,
 		m => token('BINOP3', m)],
 
-	[/if|elseif|then|else|fn|for|do|end|and|or|nil|self/,
+	[/if|elseif|then|else|fn|while|for|do|end|and|or|nil|self/,
 		m => token(m, m)],
 
 	[/[a-zA-Z\$_]+\d*\w*/,
@@ -203,6 +203,8 @@ var grammars = [
 		(_if, c) => ['cond'].concat(c)],
 	['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'],
 		(_for, i, _eq, t, _do, b, _end) => ['for', t, ['lambda'].concat(i).concat([b])]],
+	['primary', ['while', 'exp', 'do', 'block', 'end'],
+		(_while, e, _do, b, _end) => ['while', ['lambda', e], ['lambda', b]]],
 	['primary', ['primary', 'args'],
 		(f, a) => (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a)],
 	['primary', ['fn', 'pars', 'block', 'end'],

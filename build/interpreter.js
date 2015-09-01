@@ -45,7 +45,6 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 	// [.cond cond1, exp1, cond2, exp2, ... [condi], expi]
 	function evalCond(exp, env) {
 		for (var i = 1; i < exp.length - 1; i += 2) if (evaluate(exp[i], env)) return evaluate(exp[i + 1], env);
-		return evaluate(exp[exp.length - 1], env);
 	}
 
 	function environment(parent) {
@@ -163,6 +162,12 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 			'begin': function begin() {
 				return arguments[arguments.length - 1];
+			},
+
+			'while': function _while(test, func) {
+				var ret;
+				while (test()) ret = func();
+				return ret;
 			},
 
 			'for': function _for(iterator, func) {

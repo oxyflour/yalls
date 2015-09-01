@@ -62,7 +62,7 @@
 		return token('BINOP2', m);
 	}], [/>=|<=|==|>|<|~=/, function (m) {
 		return token('BINOP3', m);
-	}], [/if|elseif|then|else|fn|for|do|end|and|or|nil|self/, function (m) {
+	}], [/if|elseif|then|else|fn|while|for|do|end|and|or|nil|self/, function (m) {
 		return token(m, m);
 	}], [/[a-zA-Z\$_]+\d*\w*/, function (m) {
 		return token('ID', m);
@@ -156,6 +156,8 @@
 		return ['cond'].concat(c);
 	}], ['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'], function (_for, i, _eq, t, _do, b, _end) {
 		return ['for', t, ['lambda'].concat(i).concat([b])];
+	}], ['primary', ['while', 'exp', 'do', 'block', 'end'], function (_while, e, _do, b, _end) {
+		return ['while', ['lambda', e], ['lambda', b]];
 	}], ['primary', ['primary', 'args'], function (f, a) {
 		return (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a);
 	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_func, p, b, _end) {

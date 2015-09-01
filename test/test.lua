@@ -96,6 +96,9 @@ describe('if/else/elseif statements', fn()
 		if 1 then
 			assert.ok(1)
 		end
+		if 0 then
+			assert.ok(0)
+		end
 	end)
 
 	it('should assert else', fn()
