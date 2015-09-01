@@ -87,6 +87,11 @@ var actions = [
 	[/[^\\']*/,		addString,		'string1'],
 	[/'/, 			endString,		'string1'],
 
+	// continue line
+	[/\.\./,		beginCommentGen('continue')],
+	[/[^\n]+/,		eatComment,				'continue'],
+	[/\n/,			endComment,				'continue'],
+
 	// comments
 	[/--/,			beginCommentGen('comment-sl')],
 	[/[^\n]+/,		eatComment,				'comment-sl'],
