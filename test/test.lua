@@ -29,8 +29,6 @@ describe('functions', fn[
 	it('should define and call function', fn[
 		fn f1(x) x * x end
 		assert.equal(f1(3), 9)
-		assert.equal((f1 3), 9)
-		assert.equal (f1 3), 9
 	])
 
 	it('should define and call recursive function', fn[
@@ -101,7 +99,7 @@ describe('array', fn[
 	])
 
 	s = a.map(fn[x * x])
-	
+
 	it('should do map over an array', fn[
 		assert.equal(s[0], 1)
 		assert.equal(s[1], 4)

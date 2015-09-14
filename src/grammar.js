@@ -140,31 +140,23 @@ var grammars = [
 	['stmt', ['exp']],
 	['stmt', ['fn', 'fnname', 'pars', 'block', 'end'], (_func, a, p, b, _end) => {
 		var f = ['lambda'].concat(p).concat([b])
-		if (Array.isArray(a) && a[0] === '.')
-			return ['.', a[1], a[2], f]
-		else
-			return ['set', a, f]
+		// transform [set [. obj key] val] -> [set obj [. obj key val]]
+		return Array.isArray(a) && a[0] === '.' ?
+			['.', a[1], a[2], f] : ['set', a, f]
 	}],
 	['stmt', ['varlist', '=', 'explist'], (li, _eq, le) => {
 		var set = ['set']
-		li.forEach((_, i) => {
-			var a = li[i], e = le[i]
-			// transform [set [. obj key] val] -> [set obj [. obj key val]]
-			if (Array.isArray(a) && a[0] === '.') {
-				set.push(a[1])
-				set.push(['.', a[1], a[2], e])
-			}
-			else {
-				set.push(a)
-				set.push(e)
-			}
+		// transform [set [. obj key] val] -> [set obj [. obj key val]]
+		li.forEach((a, i) => {
+			Array.isArray(a) && a[0] === '.' ?
+				set.push(a[1], ['.', a[1], a[2], le[i]]) : set.push(a, le[i])
 		})
 		return set
 	}],
 
 	['exp', ['primary']],
-	['exp', ['primary', 'explist'],
-		(f, a) => (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a)],
+//	['exp', ['primary', 'explist'],
+//		(f, a) => (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a)],
 	['exp', ['UNOP', 'exp'],
 		(o, e) => [o, e]],
 	['exp', ['(', 'BINOP2', 'exp', ')'],
@@ -178,9 +170,9 @@ var grammars = [
 	['exp', ['exp', 'BINOP0', 'exp'],
 		(e1, o, e2) => [o, e1, e2]],
 	['exp', ['exp', 'and', 'exp'],
-		(e1, o, e2) => ['let', '_', e1, ['cond', '_', e2, '_']]],
+		(e1, o, e2) => ['let', '_', e1, ['if', '_', e2, '_']]],
 	['exp', ['exp', 'or', 'exp'],
-		(e1, o, e2) => ['let', '_', e1, ['cond', '_', '_', e2]]],
+		(e1, o, e2) => ['let', '_', e1, ['if', '_', '_', e2]]],
 
 	['primary', ['ID']],
 	['primary', ['literal']],
@@ -193,7 +185,7 @@ var grammars = [
 	['primary', ['do', 'block', 'end'],
 		(_do, b, _end) => b],
 	['primary', ['if', 'conds', 'end'],
-		(_if, c) => ['cond'].concat(c)],
+		(_if, c) => ['if'].concat(c)],
 	['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'],
 		(_for, i, _eq, t, _do, b, _end) => ['for', t, ['lambda'].concat(i).concat([b])]],
 	['primary', ['while', 'exp', 'do', 'block', 'end'],

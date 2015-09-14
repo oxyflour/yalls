@@ -1,16 +1,9 @@
 (function() {
 
-const LAMBDA = 'lambda'
-const LET = 'let'
-const LETREC = 'letrec'
-const SET = 'set'
-const IF = 'if'
-const COND = 'cond'
-
 // [.let var1, val1, var2, val2, exp] =>
 //   [[.lambda var1 var2 exp] val1 val2]
 function evalLet(exp, env) {
-	var lambda = [ LAMBDA ],
+	var lambda = [ 'lambda' ],
 		body = [ lambda ]
 	for (var i = 1; i < exp.length - 1; i += 2) {
 		lambda.push(exp[i])
@@ -25,7 +18,7 @@ function evalLet(exp, env) {
 function evalLetrec(exp, env) {
 	env = environment(env)
 	for (var i = 1; i < exp.length - 1; i += 2)
-		env(exp[i], evaluate(exp[i + 1], env))
+		env.local[exp[i]] = evaluate(exp[i + 1], env)
 	return evaluate(exp[exp.length - 1], env)
 }
 
@@ -35,7 +28,7 @@ function evalSet(exp, env) {
 	for (var i = 1; i < exp.length - 1; i += 2)
 		pairs.push([exp[i], evaluate(exp[i + 1], env)])
 	pairs.forEach(p => env(p[0], p[1]))
-	return pairs[0] && pairs[0][1]
+	return i < exp.length ? evaluate(exp[i], env) : null
 }
 
 // [.cond cond1, exp1, cond2, exp2, ... [condi], expi]
@@ -43,18 +36,19 @@ function evalCond(exp, env) {
 	for (var i = 1; i < exp.length - 1; i += 2)
 		if (evaluate(exp[i], env))
 			return evaluate(exp[i + 1], env)
+	return i < exp.length ? evaluate(exp[i], env) : null
 }
 
-function environment(parent) {
-	var local = { }
-	return function(key, value) {
-		if (arguments.length > 1)
-			return local[key] = value
-		else if (key in local)
-			return local[key]
-		else
-			return parent(key)
+function environment(parent, local) {
+	var env = function(name, value) {
+		var e = env
+		while (e && !(name in e.local)) e = e.parent
+		var local = e && e.local || env.local
+		return arguments.length > 1 ? (local[name] = value) : local[name]
 	}
+	env.parent = parent
+	env.local = local || { }
+	return env
 }
 
 function closure(lambda, env) {
@@ -62,7 +56,7 @@ function closure(lambda, env) {
 		var e = environment(env)
 		this && e('self', this)
 		for (var i = 1; i < lambda.length - 1; i ++)
-			e(lambda[i], arguments[i - 1])
+			e.local[ lambda[i] ] = arguments[i - 1]
 		return evaluate(lambda[lambda.length - 1], e)
 	}
 }
@@ -70,15 +64,15 @@ function closure(lambda, env) {
 function evaluate(exp, env) {
 	if (Array.isArray(exp)) {
 		var head = exp[0]
-		if (head === LET)
+		if (head === 'let')
 			return evalLet(exp, env)
-		else if (head === LETREC)
+		else if (head === 'letrec')
 			return evalLetrec(exp, env)
-		else if (head === SET)
+		else if (head === 'set')
 			return evalSet(exp, env)
-		else if (head === IF || head === COND)
+		else if (head === 'if')
 			return evalCond(exp, env)
-		else if (head === LAMBDA)
+		else if (head === 'lambda')
 			return closure(exp, env)
 		else
 			return evaluate(exp[0], env).apply(env('self'),
@@ -99,152 +93,7 @@ function evaluate(exp, env) {
 	}
 }
 
-function rootenv() {
-	var env = function(key) {
-		if (key in local)
-			return local[key]
-		throw('undefined variable `' + key + '`!')
-	}
-
-	var self = {
-
-		$seek: function(member) {
-			var object = this
-			while (object && object[member] === undefined)
-				object = object.$proto
-			if (object)
-				return object[member]
-		},
-
-		$call: function(object, member, args) {
-			var fn = self.$seek.call(object, member) || self[member]
-			return fn.apply(object, args)
-		},
-
-		$get: function (object, member) {
-			return self.$seek.call(object, member) || self[member]
-		},
-
-		derive: function() {
-			return { $proto: this }
-		},
-
-		print: function() {
-			console.log(this)
-		},
-
-	}
-
-	var local = {
-
-		'self': self,
-
-		'nil': null,
-
-		'PI': Math.PI,
-
-		'^': (a, b) => Math.pow(a, b),
-
-		'*': (a, b) => a * b,
-		'/': (a, b) => a / b,
-
-		'+': (a, b) => a + b,
-		'-': (a, b) => a - b,
-
-		'>': (a, b) => a > b,
-		'<': (a, b) => a < b,
-		'=': (a, b) => a == b,
-		'>=': (a, b) => a >= b,
-		'<=': (a, b) => a <= b,
-		'==': (a, b) => a === b,
-
-		'begin': function() {
-			return arguments[arguments.length - 1]
-		},
-
-		'while': function(test, func) {
-			var ret
-			while (test())
-				ret = func()
-			return ret
-		},
-
-		'for': function(iterator, func) {
-			var data = [ ], ret = [ ]
-			while (data = iterator.apply(null, data))
-				ret.push(func.apply(null, data))
-			return ret
-		},
-
-		'range': function() {
-			var start = 0, step = 1, end = 0,
-				args = Array.prototype.slice.call(arguments)
-			if (args.length === 1)
-				end = args[0]
-			else if (args.length === 2)
-				[start, end] = args
-			else if (args.length === 3)
-				[start, step, end] = args
-			return i => {
-				i = i === undefined ? start : i + step
-				if (i >= start && i < end)
-					return [i]
-			}
-		},
-
-		'pair': function(object) {
-			var keys = Object.keys(object)
-			return (v, k, i) => {
-				i = i === undefined ? 0 : i + 1
-				if (i >= 0 && i < keys.length) {
-					k = keys[i]
-					return [object[k], k, i]
-				}
-			}
-		},
-
-		'ipair': function(list) {
-			return (v, i) => {
-				i = i === undefined ? 0 : i + 1
-				if (i >= 0 && i < list.length) {
-					return [list[i], i]
-				}
-			}
-		},
-
-		'.': function(o, k, v) {
-			return arguments.length > 2 ?
-				(o[k] = v, o) : self.$get.call(o, o, k)
-		},
-
-		':': function(o, k) {
-			return self.$call.call(o, o, k,
-				Array.prototype.slice.call(arguments).slice(2))
-		},
-
-		'array': function() {
-			return Array.prototype.slice.call(arguments)
-		},
-
-		'dict': function() {
-			var k = [ ], v = [ ], d = { }, j = 0
-			for (var i = 0; i < arguments.length; i += 2) {
-				var x = arguments[i],
-					y = arguments[i + 1]
-				k.push(x)
-				v.push(y)
-				d[ x !== null ? x : (j++) ] = y
-			}
-			return k.every(i => i === null) ? v : d
-		},
-		
-	}
-	return env
-}
-
-evaluate.environment = function(parent) {
-	return environment(parent || rootenv())
-}
+evaluate.environment = environment
 
 if (typeof(module) !== 'undefined')
 	module.exports = evaluate

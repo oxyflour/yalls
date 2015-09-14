@@ -102,25 +102,19 @@
 		return l.concat([s]);
 	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']], ['stmt', ['fn', 'fnname', 'pars', 'block', 'end'], function (_func, a, p, b, _end) {
 		var f = ['lambda'].concat(p).concat([b]);
-		if (Array.isArray(a) && a[0] === '.') return ['.', a[1], a[2], f];else return ['set', a, f];
+		// transform [set [. obj key] val] -> [set obj [. obj key val]]
+		return Array.isArray(a) && a[0] === '.' ? ['.', a[1], a[2], f] : ['set', a, f];
 	}], ['stmt', ['varlist', '=', 'explist'], function (li, _eq, le) {
 		var set = ['set'];
-		li.forEach(function (_, i) {
-			var a = li[i],
-			    e = le[i];
-			// transform [set [. obj key] val] -> [set obj [. obj key val]]
-			if (Array.isArray(a) && a[0] === '.') {
-				set.push(a[1]);
-				set.push(['.', a[1], a[2], e]);
-			} else {
-				set.push(a);
-				set.push(e);
-			}
+		// transform [set [. obj key] val] -> [set obj [. obj key val]]
+		li.forEach(function (a, i) {
+			Array.isArray(a) && a[0] === '.' ? set.push(a[1], ['.', a[1], a[2], le[i]]) : set.push(a, le[i]);
 		});
 		return set;
-	}], ['exp', ['primary']], ['exp', ['primary', 'explist'], function (f, a) {
-		return (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a);
-	}], ['exp', ['UNOP', 'exp'], function (o, e) {
+	}], ['exp', ['primary']],
+	//	['exp', ['primary', 'explist'],
+	//		(f, a) => (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a)],
+	['exp', ['UNOP', 'exp'], function (o, e) {
 		return [o, e];
 	}], ['exp', ['(', 'BINOP2', 'exp', ')'], function (_l, o, e2, _r) {
 		return [o, e2];
@@ -133,9 +127,9 @@
 	}], ['exp', ['exp', 'BINOP0', 'exp'], function (e1, o, e2) {
 		return [o, e1, e2];
 	}], ['exp', ['exp', 'and', 'exp'], function (e1, o, e2) {
-		return ['let', '_', e1, ['cond', '_', e2, '_']];
+		return ['let', '_', e1, ['if', '_', e2, '_']];
 	}], ['exp', ['exp', 'or', 'exp'], function (e1, o, e2) {
-		return ['let', '_', e1, ['cond', '_', '_', e2]];
+		return ['let', '_', e1, ['if', '_', '_', e2]];
 	}], ['primary', ['ID']], ['primary', ['literal']], ['primary', ['(', 'exp', ')'], function (_l, c, _r) {
 		return c;
 	}], ['primary', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
@@ -145,7 +139,7 @@
 	}], ['primary', ['do', 'block', 'end'], function (_do, b, _end) {
 		return b;
 	}], ['primary', ['if', 'conds', 'end'], function (_if, c) {
-		return ['cond'].concat(c);
+		return ['if'].concat(c);
 	}], ['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'], function (_for, i, _eq, t, _do, b, _end) {
 		return ['for', t, ['lambda'].concat(i).concat([b])];
 	}], ['primary', ['while', 'exp', 'do', 'block', 'end'], function (_while, e, _do, b, _end) {
