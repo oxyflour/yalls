@@ -53,15 +53,15 @@
 	}
 
 	var actions = [[/not/, function (m) {
-		return token('UNOP', m);
+		return token('NOT', m);
 	}], [/\^/, function (m) {
-		return token('BINOP0', m);
+		return token('POWER', m);
 	}], [/\*|\/|%/, function (m) {
-		return token('BINOP1', m);
+		return token('MUL', m);
 	}], [/\+|-/, function (m) {
-		return token('BINOP2', m);
+		return token('ADD', m);
 	}], [/>=|<=|==|>|<|~=/, function (m) {
-		return token('BINOP3', m);
+		return token('CMP', m);
 	}], [/if|elseif|then|else|fn|while|for|do|end|and|or|nil|self/, function (m) {
 		return token(m, m);
 	}], [/[a-zA-Z\$_]+\d*\w*/, function (m) {
@@ -114,17 +114,17 @@
 	}], ['exp', ['primary']],
 	//	['exp', ['primary', 'explist'],
 	//		(f, a) => (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a)],
-	['exp', ['UNOP', 'exp'], function (o, e) {
+	['exp', ['NOT', 'exp'], function (o, e) {
 		return [o, e];
-	}], ['exp', ['(', 'BINOP2', 'exp', ')'], function (_l, o, e2, _r) {
+	}], ['exp', ['(', 'ADD', 'exp', ')'], function (_l, o, e2, _r) {
 		return [o, e2];
-	}], ['exp', ['exp', 'BINOP3', 'exp'], function (e1, o, e2) {
+	}], ['exp', ['exp', 'CMP', 'exp'], function (e1, o, e2) {
 		return [o, e1, e2];
-	}], ['exp', ['exp', 'BINOP2', 'exp'], function (e1, o, e2) {
+	}], ['exp', ['exp', 'ADD', 'exp'], function (e1, o, e2) {
 		return [o, e1, e2];
-	}], ['exp', ['exp', 'BINOP1', 'exp'], function (e1, o, e2) {
+	}], ['exp', ['exp', 'MUL', 'exp'], function (e1, o, e2) {
 		return [o, e1, e2];
-	}], ['exp', ['exp', 'BINOP0', 'exp'], function (e1, o, e2) {
+	}], ['exp', ['exp', 'POWER', 'exp'], function (e1, o, e2) {
 		return [o, e1, e2];
 	}], ['exp', ['exp', 'and', 'exp'], function (e1, o, e2) {
 		return ['let', '_', e1, ['if', '_', e2, '_']];
@@ -137,7 +137,7 @@
 	}], ['primary', ['primary', '.', 'ID'], function (p, _d, i) {
 		return ['.', p, token('STR', i.value)];
 	}], ['primary', ['do', 'block', 'end'], function (_do, b, _end) {
-		return b;
+		return ['let', b];
 	}], ['primary', ['if', 'conds', 'end'], function (_if, c) {
 		return ['if'].concat(c);
 	}], ['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'], function (_for, i, _eq, t, _do, b, _end) {
@@ -182,7 +182,7 @@
 	// function args
 	['args', ['(', ')'], function (d) {
 		return [];
-	}], ['args', ['(', 'explist', ')'], function (_l, d, _r) {
+	}], ['args', ['(', 'fieldlist', ')'], function (_l, d, _r) {
 		return d;
 	}],
 
@@ -229,15 +229,15 @@
 	}]];
 
 	var precedence = {
-		UNOP: [20, 'right'],
+		NOT: [20, 'right'],
 		'(': [15, 'right'],
 		')': [15, 'left'],
 		'[': [15, 'right'],
 		']': [15, 'left'],
-		BINOP0: [14, 'right'],
-		BINOP1: [13, 'left'],
-		BINOP2: [12, 'left'],
-		BINOP3: [11, 'left'],
+		POWER: [14, 'right'],
+		MUL: [13, 'left'],
+		ADD: [12, 'left'],
+		CMP: [11, 'left'],
 		and: [10, 'left'],
 		or: [10, 'left'],
 		'.': [5, 'left'],

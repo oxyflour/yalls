@@ -6,25 +6,14 @@ var self = {
 		var object = this
 		while (object && object[member] === undefined)
 			object = object.$proto
-		if (object)
-			return object[member]
-	},
-
-	$call: function(object, member, args) {
-		var fn = self.$seek.call(object, member) || self[member]
-		return fn.apply(object, args)
-	},
-
-	$get: function (object, member) {
-		return self.$seek.call(object, member) || self[member]
+		return (object || self)[member]
 	},
 
 	derive: function() {
-		return { $proto: this }
-	},
-
-	print: function() {
-		console.log(this)
+		return {
+			$proto: this,
+			$seek: this.$seek || self.$seek
+		}
 	},
 
 }
@@ -124,12 +113,12 @@ var root = {
 
 	'.': function(o, k, v) {
 		return arguments.length > 2 ?
-			(o[k] = v, o) : self.$get.call(o, o, k)
+			(o[k] = v, o) : (o.$seek || self.$seek).call(o, k)
 	},
 
 	':': function(o, k) {
-		return self.$call.call(o, o, k,
-			Array.prototype.slice.call(arguments).slice(2))
+		var fn = (o.$seek || self.$seek).call(o, k)
+		return fn.apply(o, Array.prototype.slice.call(arguments).slice(2))
 	},
 
 }

@@ -18,16 +18,16 @@ function evalLet(exp, env) {
 function evalLetrec(exp, env) {
 	env = environment(env)
 	for (var i = 1; i < exp.length - 1; i += 2)
-		env.local[exp[i]] = evaluate(exp[i + 1], env)
+		env.update(exp[i], evaluate(exp[i + 1], env))
 	return evaluate(exp[exp.length - 1], env)
 }
 
 // [.set var1 val1, var2, val2, ...]
 function evalSet(exp, env) {
-	var pairs = [ ]
 	for (var i = 1; i < exp.length - 1; i += 2)
-		pairs.push([exp[i], evaluate(exp[i + 1], env)])
-	pairs.forEach(p => env(p[0], p[1]))
+		exp[i + 1] = evaluate(exp[i + 1], env)
+	for (var i = 1; i < exp.length - 1; i += 2)
+		env.set(exp[i], exp[i + 1])
 	return i < exp.length ? evaluate(exp[i], env) : null
 }
 
@@ -40,24 +40,36 @@ function evalCond(exp, env) {
 }
 
 function environment(parent, local) {
-	var env = function(name, value) {
-		var e = env
-		while (e && !(name in e.local)) e = e.parent
-		var local = e && e.local || env.local
-		return arguments.length > 1 ? (local[name] = value) : local[name]
+	var env = {
+		parent: parent,
+		local: local || { },
+		lookup: function(name) {
+			var env = this
+			while (env && !(name in env.local)) env = env.parent
+			return env && env.local || this.local
+		},
+		get: function(name) {
+			return this.lookup(name)[name]
+		},
+		set: function(name, value) {
+			return this.lookup(name)[name] = value
+		},
+		update: function(name, value) {
+			return this.local[name] = value
+		},
 	}
-	env.parent = parent
-	env.local = local || { }
+	env.update('local', env)
 	return env
 }
 
-function closure(lambda, env) {
+function closure(lambda, parent) {
 	return function() {
-		var e = environment(env)
-		this && e('self', this)
+		var env = environment(parent)
+		env.update('self', this)
+		env.update('args', Array.prototype.slice.call(arguments))
 		for (var i = 1; i < lambda.length - 1; i ++)
-			e.local[ lambda[i] ] = arguments[i - 1]
-		return evaluate(lambda[lambda.length - 1], e)
+			env.update(lambda[i], arguments[i - 1])
+		return evaluate(lambda[lambda.length - 1], env)
 	}
 }
 
@@ -75,14 +87,14 @@ function evaluate(exp, env) {
 		else if (head === 'lambda')
 			return closure(exp, env)
 		else
-			return evaluate(exp[0], env).apply(env('self'),
+			return evaluate(exp[0], env).apply(env.get('self'),
 				exp.slice(1).map(e => evaluate(e, env)))
 	}
 	else if (typeof(exp) === 'string') {
 		if (exp[0] === '"')
 			return exp.substr(1)
 		else
-			return env(exp)
+			return env.get(exp)
 	}
 	else {
 		// there is no undefined in the language

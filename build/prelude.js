@@ -9,24 +9,14 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 		$seek: function $seek(member) {
 			var object = this;
 			while (object && object[member] === undefined) object = object.$proto;
-			if (object) return object[member];
-		},
-
-		$call: function $call(object, member, args) {
-			var fn = self.$seek.call(object, member) || self[member];
-			return fn.apply(object, args);
-		},
-
-		$get: function $get(object, member) {
-			return self.$seek.call(object, member) || self[member];
+			return (object || self)[member];
 		},
 
 		derive: function derive() {
-			return { $proto: this };
-		},
-
-		print: function print() {
-			console.log(this);
+			return {
+				$proto: this,
+				$seek: this.$seek || self.$seek
+			};
 		}
 
 	};
@@ -161,11 +151,12 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 		'self': self,
 
 		'.': function _(o, k, v) {
-			return arguments.length > 2 ? (o[k] = v, o) : self.$get.call(o, o, k);
+			return arguments.length > 2 ? (o[k] = v, o) : (o.$seek || self.$seek).call(o, k);
 		},
 
 		':': function _(o, k) {
-			return self.$call.call(o, o, k, Array.prototype.slice.call(arguments).slice(2));
+			var fn = (o.$seek || self.$seek).call(o, k);
+			return fn.apply(o, Array.prototype.slice.call(arguments).slice(2));
 		}
 
 	};

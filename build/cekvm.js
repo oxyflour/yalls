@@ -139,9 +139,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
     }
 
     function run(exp, env) {
-
         exp = anf(exp);
-
         exp = (function stmt(exp) {
             if (Array.isArray(exp)) {
                 exp = exp.map(stmt);

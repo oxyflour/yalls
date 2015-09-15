@@ -5,7 +5,30 @@
 <button onclick="execute()">Execute</button>
 <textarea id="input" style="width:100%" rows="10">
 
-(fn() 1 end)()
+buildHtml = fn(env)
+	env.get = fn(name)
+		fn()
+			if args.length then
+				'<' + name + '>' + args.join('') + '</' + name + '>'
+			else
+				'<' + name + ' />'
+			end
+		end
+	end
+end
+
+text = do buildHtml(local)
+	html(
+		head(),
+		body(
+			class = 'sth',
+			h1('Hello World'),
+			p('blablabla')
+		)
+	)
+end
+
+echo(text)
 
 </textarea>
 
@@ -23,7 +46,7 @@ loading...
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.6.15/browser-polyfill.min.js"></script>
 <script src="../yajily/build/lexer.js"></script>
 <script src="../yajily/build/parser.js"></script>
-<script src="build/cekvm.js"></script>
+<script src="build/interpreter.js"></script>
 <script src="build/grammar.js"></script>
 <script src="build/prelude.js"></script>
 <script>
@@ -78,14 +101,14 @@ function execute() {
 
 var env = evaluate.environment(null, predule)
 // inject function
-env('echo', function() {
-	$('#result').append('<pre>' +
-		Array.prototype.slice.call(arguments).join(' ') +
-	'</pre>')
+env.update('echo', function() {
+	$('<pre></pre>')
+		.text(Array.prototype.slice.call(arguments).join(' '))
+		.appendTo('#result')
 })
 // inject object
-env('console', console)
-env('$', $)
+env.update('console', console)
+env.update('$', $)
 
 // compiled table, will be loaded later
 var table
