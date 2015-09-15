@@ -9,12 +9,12 @@ buildHtml = fn(env)
   get = env.get
   env.get = fn(name)
     get.call(env, name) or fn()
-      attrs = for v, k = pair(arga) do k + '="' + v + '"' end
+      attrs = for v, k = pair(arga) do "${ k }=\"${ v }\"" end
       tag = attrs.length and name + ' ' + attrs.join('') or name
       if args.length then
-        '<' + tag + '>' + args.join('') + '</' + name + '>'
+        "<${ tag }>${ args.join('') }</${ name }>"
       else
-        '<' + tag + ' />'
+        "<${ tag } />"
       end
     end
   end

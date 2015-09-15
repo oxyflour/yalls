@@ -33,6 +33,19 @@ function endString(m) {
 	this.pop();
 	return token('STR', this.tempString, m)
 }
+function breakPartialString(m) {
+	this.push(undefined)
+	return token('PSTR', this.tempString, m)
+}
+function continuePartialString(m) {
+	this.pop()
+	this.tempString = ''
+	count(m)
+}
+function endPartialString(m) {
+	this.pop();
+	return token('PSTR', this.tempString, m)
+}
 
 function beginCommentGen(tag) {
 	return function(m) {
@@ -53,6 +66,34 @@ function endCommentWithNewLine(m) {
 }
 
 var actions = [
+
+	// strings
+	[/"/,			beginStringGen('string')],
+	[/\\[ntr"]/,	escapeString,	'string'],
+	[/[^\\"\${]*/,	addString,		'string'],
+	[/[\${]/, 		addString, 		'string'],
+	[/\${/, 		breakPartialString, 	'string'],
+	[/}/, 			continuePartialString, 	'/string/'],
+	[/"/, 			endPartialString,		'string'],
+
+	[/'/,			beginStringGen('string1')],
+	[/\\[ntr']/,	escapeString,	'string1'],
+	[/[^\\']*/,		addString,		'string1'],
+	[/'/, 			endString,		'string1'],
+
+	// continue line
+	[/\.\./,		beginCommentGen('continue')],
+	[/[^\n]+/,		eatComment,				'continue'],
+	[/\n/,			endComment,				'continue'],
+
+	// comments
+	[/--/,			beginCommentGen('comment-sl')],
+	[/[^\n]+/,		eatComment,				'comment-sl'],
+	[/\n/,			endCommentWithNewLine,	'comment-sl'],
+	[/--\[\[/,		beginCommentGen('comment-ml')],
+	[/.*?--\]\]/,	endComment,				'comment-ml'],
+	[/.*/,			eatComment,				'comment-ml'],
+	[/\n/,			eatComment,				'comment-ml'],
 
 	[/not/,
 		m => token('NOT', m)],
@@ -76,30 +117,6 @@ var actions = [
 		m => token('NUM', parseInt(m), m)],
 	[/\d+(?:\.\d+(?:[eE]-?\d+)?)?/,
 		m => token('NUM', parseFloat(m), m)],
-
-	// strings
-	[/"/,			beginStringGen('string')],
-	[/\\[ntr"]/,	escapeString,	'string'],
-	[/[^\\"]*/,		addString,		'string'],
-	[/"/, 			endString,		'string'],
-	[/'/,			beginStringGen('string1')],
-	[/\\[ntr']/,	escapeString,	'string1'],
-	[/[^\\']*/,		addString,		'string1'],
-	[/'/, 			endString,		'string1'],
-
-	// continue line
-	[/\.\./,		beginCommentGen('continue')],
-	[/[^\n]+/,		eatComment,				'continue'],
-	[/\n/,			endComment,				'continue'],
-
-	// comments
-	[/--/,			beginCommentGen('comment-sl')],
-	[/[^\n]+/,		eatComment,				'comment-sl'],
-	[/\n/,			endCommentWithNewLine,	'comment-sl'],
-	[/--\[\[/,		beginCommentGen('comment-ml')],
-	[/.*?--\]\]/,	endComment,				'comment-ml'],
-	[/.*/,			eatComment,				'comment-ml'],
-	[/\n/,			eatComment,				'comment-ml'],
 
 	[/\[|{|\(|\]|}|\)|\.|=|,|\:/,
 		m => token(m, m)],
@@ -176,6 +193,7 @@ var grammars = [
 
 	['primary', ['ID']],
 	['primary', ['literal']],
+	['primary', ['cstr']],
 	['primary', ['(', 'exp', ')'],
 		(_l, c, _r) => c],
 	['primary', ['primary', '[', 'exp', ']'],
@@ -198,6 +216,11 @@ var grammars = [
 		(_func, p, b, _end) => ['lambda'].concat(p).concat([b])],
 	['primary', ['fn', '[', 'block', ']'],
 		(_func, _l, b, _r) => ['lambda', 'x', 'y', 'z', 'u', 'v', 'w'].concat([b])],
+
+	['cstr', ['PSTR'],
+		(p) => token('STR', p.value)],
+	['cstr', ['cstr', 'exp', 'PSTR'],
+		(c, e, p) => ['+', ['+', c, e], token('STR', p.value)]],
 
 	['varlist', ['variable'],
 		(v) => [v]],
