@@ -145,7 +145,7 @@
 	}], ['primary', ['while', 'exp', 'do', 'block', 'end'], function (_while, e, _do, b, _end) {
 		return ['while', ['lambda', e], ['lambda', b]];
 	}], ['primary', ['primary', 'args'], function (f, a) {
-		return (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a);
+		return f[0] === '.' ? ['apply', ':', 'self', ['dict', null, f[1], null, f[2]].concat(a)] : ['apply', f, 'self', ['dict'].concat(a)];
 	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_func, p, b, _end) {
 		return ['lambda'].concat(p).concat([b]);
 	}], ['primary', ['fn', '[', 'block', ']'], function (_func, _l, b, _r) {
@@ -218,13 +218,13 @@
 		return l.concat(f);
 	}], ['field', ['exp'], function (e) {
 		return [null, e];
-	}], ['field', ['ID', ':', 'exp'], function (i, _eq, e) {
+	}], ['field', ['ID', '=', 'exp'], function (i, _eq, e) {
 		return [token('STR', i.value, ''), e];
-	}], ['field', ['NUM', ':', 'exp'], function (i, _eq, e) {
+	}], ['field', ['NUM', '=', 'exp'], function (i, _eq, e) {
 		return [token('STR', i.value, ''), e];
-	}], ['field', ['STR', ':', 'exp'], function (i, _eq, e) {
+	}], ['field', ['STR', '=', 'exp'], function (i, _eq, e) {
 		return [i, e];
-	}], ['field', ['[', 'exp', ']', ':', 'exp'], function (_l, e1, _r, _eq, e2) {
+	}], ['field', ['[', 'exp', ']', '=', 'exp'], function (_l, e1, _r, _eq, e2) {
 		return [e1, e2];
 	}]];
 

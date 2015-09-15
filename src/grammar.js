@@ -191,7 +191,9 @@ var grammars = [
 	['primary', ['while', 'exp', 'do', 'block', 'end'],
 		(_while, e, _do, b, _end) => ['while', ['lambda', e], ['lambda', b]]],
 	['primary', ['primary', 'args'],
-		(f, a) => (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a)],
+		(f, a) => f[0] === '.' ?
+			['apply', ':', 'self', ['dict', null, f[1], null, f[2]].concat(a)] :
+			['apply', f, 'self', ['dict'].concat(a)]],
 	['primary', ['fn', 'pars', 'block', 'end'],
 		(_func, p, b, _end) => ['lambda'].concat(p).concat([b])],
 	['primary', ['fn', '[', 'block', ']'],
@@ -233,7 +235,7 @@ var grammars = [
 	// function args
 	['args', ['(', ')'],
 		(d) => [ ]],
-	['args', ['(', 'explist', ')'],
+	['args', ['(', 'fieldlist', ')'],
 		(_l, d, _r) => d],
 
 	// for iterator
@@ -275,13 +277,13 @@ var grammars = [
 
 	['field', ['exp'],
 		(e) => [null, e]],
-	['field', ['ID', ':', 'exp'],
+	['field', ['ID', '=', 'exp'],
 		(i, _eq, e) => [token('STR', i.value, ''), e]],
-	['field', ['NUM', ':', 'exp'],
+	['field', ['NUM', '=', 'exp'],
 		(i, _eq, e) => [token('STR', i.value, ''), e]],
-	['field', ['STR', ':', 'exp'],
+	['field', ['STR', '=', 'exp'],
 		(i, _eq, e) => [i, e]],
-	['field', ['[', 'exp', ']', ':', 'exp'],
+	['field', ['[', 'exp', ']', '=', 'exp'],
 		(_l, e1, _r, _eq, e2) => [e1, e2]],
 ]
 

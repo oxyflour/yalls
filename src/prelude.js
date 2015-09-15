@@ -43,6 +43,20 @@ var root = {
 		return arguments[arguments.length - 1]
 	},
 
+	'apply': function(proc, self, para) {
+		var args = [ ], arga = { }
+		if (Array.isArray(para)) {
+			args = para
+			arga = null
+		}
+		else for (var k in para) {
+			if (+k == k) args.push(para[k])
+			else arga[k] = para[k]
+		}
+		proc.arga = arga
+		return proc.apply(self, args)
+	},
+
 	'while': function(test, func) {
 		var ret
 		while (test())
@@ -113,11 +127,11 @@ var root = {
 
 	'.': function(o, k, v) {
 		return arguments.length > 2 ?
-			(o[k] = v, o) : (o.$seek || self.$seek).call(o, k)
+			(o[k] = v, o) : (o && o.$seek || self.$seek).call(o, k)
 	},
 
 	':': function(o, k) {
-		var fn = (o.$seek || self.$seek).call(o, k)
+		var fn = (o && o.$seek || self.$seek).call(o, k)
 		return fn.apply(o, Array.prototype.slice.call(arguments).slice(2))
 	},
 
