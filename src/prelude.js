@@ -20,7 +20,7 @@ var self = {
 
 var root = {
 
-	'nil': null,
+	'nil': undefined,
 
 	'PI': Math.PI,
 
@@ -43,20 +43,6 @@ var root = {
 		return arguments[arguments.length - 1]
 	},
 
-	'apply': function(proc, self, para) {
-		var args = [ ], arga = { }
-		if (Array.isArray(para)) {
-			args = para
-			arga = null
-		}
-		else for (var k in para) {
-			if (+k == k) args.push(para[k])
-			else arga[k] = para[k]
-		}
-		proc.arga = arga
-		return proc.apply(self, args)
-	},
-
 	'while': function(test, func) {
 		var ret
 		while (test())
@@ -66,8 +52,8 @@ var root = {
 
 	'for': function(iterator, func) {
 		var data = [ ], ret = [ ]
-		while (data = iterator.apply(null, data))
-			ret.push(func.apply(null, data))
+		while (data = iterator.apply(undefined, data))
+			ret.push(func.apply(undefined, data))
 		return ret
 	},
 
@@ -107,20 +93,15 @@ var root = {
 		}
 	},
 
-	'array': function() {
+	'array': function array() {
 		return Array.prototype.slice.call(arguments)
 	},
 
-	'dict': function() {
-		var k = [ ], v = [ ], d = { }, j = 0
-		for (var i = 0; i < arguments.length; i += 2) {
-			var x = arguments[i],
-				y = arguments[i + 1]
-			k.push(x)
-			v.push(y)
-			d[ x !== null ? x : (j++) ] = y
-		}
-		return k.every(i => i === null) ? v : d
+	'dict': function dict() {
+		var data = { }
+		for (var i = 0; i < arguments.length - 1; i += 2)
+			data[arguments[i]] = arguments[i + 1]
+		return data
 	},
 
 	'self': self,
@@ -132,6 +113,7 @@ var root = {
 
 	':': function(o, k) {
 		var fn = (o && o.$seek || self.$seek).call(o, k)
+		if (!fn) throw 'Prelude: method "' + k + '" does not exist on object ' + o
 		return fn.apply(o, Array.prototype.slice.call(arguments).slice(2))
 	},
 
@@ -140,6 +122,6 @@ var root = {
 if (typeof(module) !== 'undefined')
 	module.exports = root
 else if (typeof(window) !== 'undefined')
-	window.predule = root
+	window.prelude = root
 
 })()

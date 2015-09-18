@@ -23,7 +23,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 	var root = {
 
-		'nil': null,
+		'nil': undefined,
 
 		'PI': Math.PI,
 
@@ -68,19 +68,6 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			return arguments[arguments.length - 1];
 		},
 
-		'apply': function apply(proc, self, para) {
-			var args = [],
-			    arga = {};
-			if (Array.isArray(para)) {
-				args = para;
-				arga = null;
-			} else for (var k in para) {
-				if (+k == k) args.push(para[k]);else arga[k] = para[k];
-			}
-			proc.arga = arga;
-			return proc.apply(self, args);
-		},
-
 		'while': function _while(test, func) {
 			var ret;
 			while (test()) ret = func();
@@ -90,7 +77,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 		'for': function _for(iterator, func) {
 			var data = [],
 			    ret = [];
-			while (data = iterator.apply(null, data)) ret.push(func.apply(null, data));
+			while (data = iterator.apply(undefined, data)) ret.push(func.apply(undefined, data));
 			return ret;
 		},
 
@@ -145,20 +132,9 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 		},
 
 		'dict': function dict() {
-			var k = [],
-			    v = [],
-			    d = {},
-			    j = 0;
-			for (var i = 0; i < arguments.length; i += 2) {
-				var x = arguments[i],
-				    y = arguments[i + 1];
-				k.push(x);
-				v.push(y);
-				d[x !== null ? x : j++] = y;
-			}
-			return k.every(function (i) {
-				return i === null;
-			}) ? v : d;
+			var data = {};
+			for (var i = 0; i < arguments.length - 1; i += 2) data[arguments[i]] = arguments[i + 1];
+			return data;
 		},
 
 		'self': self,
@@ -169,10 +145,11 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 		':': function _(o, k) {
 			var fn = (o && o.$seek || self.$seek).call(o, k);
+			if (!fn) throw 'Prelude: method "' + k + '" does not exist on object ' + o;
 			return fn.apply(o, Array.prototype.slice.call(arguments).slice(2));
 		}
 
 	};
 
-	if (typeof module !== 'undefined') module.exports = root;else if (typeof window !== 'undefined') window.predule = root;
+	if (typeof module !== 'undefined') module.exports = root;else if (typeof window !== 'undefined') window.prelude = root;
 })();

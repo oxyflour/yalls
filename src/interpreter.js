@@ -29,7 +29,7 @@ function evalSet(exp, env) {
 	var pair = [ ]
 	for (var i = 1; i < exp.length - 1; i += 2)
 		pair.push(exp[i], evaluate(exp[i + 1], env))
-	var last = null
+	var last = undefined
 	for (var i = 0; i < pair.length - 1; i += 2)
 		env.update(pair[i], last = pair[i + 1])
 	return last
@@ -40,26 +40,35 @@ function evalCond(exp, env) {
 	for (var i = 1; i < exp.length - 1; i += 2)
 		if (evaluate(exp[i], env))
 			return evaluate(exp[i + 1], env)
-	return i < exp.length ? evaluate(exp[i], env) : null
+	return i < exp.length ? evaluate(exp[i], env) : undefined
 }
 
 function environment(parent, local) {
+	local = local || { }
 	var env = {
-		parent: parent,
-		local: local || { },
-		lookup: function(name) {
-			var env = this
-			while (env && !(name in env.local)) env = env.parent
-			return env && env.local || this.local
+		clone: function(loc) {
+			loc = loc || { }
+			for (var k in local)
+				loc[k] = local[k]
+			return environment(parent, loc)
+		},
+		has: function(name) {
+			return name in local || parent && parent.has(name)
 		},
 		get: function(name) {
-			return this.lookup(name)[name]
+			return !parent || name in local ?
+				local[name] : parent.get(name)
 		},
+		/*
+		 * overwritting variables in parent env is disabled
+		 *
 		set: function(name, value) {
-			return this.lookup(name)[name] = value
+			return !parent || name in local ?
+				(local[name] = value) : parent.set(name, value)
 		},
+		 */
 		update: function(name, value) {
-			return this.local[name] = value
+			return local[name] = value
 		},
 	}
 	env.update('local', env)
@@ -86,8 +95,16 @@ function closure(lambda, parent) {
 }
 
 function apply(exp, env) {
-	var proc = evaluate(exp[0], env),
-		args = exp.slice(1).map(e => evaluate(e, env))
+	var args = [ ], arga = { }
+	exp.slice(1).forEach(e => {
+		if (Array.isArray(e) && e[0] === 'name=arg')
+			arga[evaluate(e[1], env)] = evaluate(e[2], env)
+		else
+			args.push(evaluate(e, env))
+	})
+
+	var proc = evaluate(exp[0], env)
+	proc.arga = arga
 	return proc.apply(env.get('self'), args)
 }
 
@@ -102,6 +119,10 @@ function evaluate(exp, env) {
 			return evalSet(exp, env)
 		else if (head === 'if')
 			return evalCond(exp, env)
+		else if (head === 'and')
+			return evaluate(exp[1], env) && evaluate(exp[2], env)
+		else if (head === 'or')
+			return evaluate(exp[1], env) || evaluate(exp[2], env)
 		else if (head === 'lambda')
 			return closure(exp, env)
 		else

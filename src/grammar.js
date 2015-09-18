@@ -70,10 +70,10 @@ var actions = [
 	// strings
 	[/"/,			beginStringGen('string')],
 	[/\\[ntr"]/,	escapeString,	'string'],
-	[/[^\\"\${]*/,	addString,		'string'],
-	[/[\${]/, 		addString, 		'string'],
-	[/\${/, 		breakPartialString, 	'string'],
-	[/}/, 			continuePartialString, 	'/string/'],
+	[/[^\\"{]*/,	addString,		'string'],
+	[/{/, 			addString, 		'string'],
+	[/{{/, 			breakPartialString, 	'string'],
+	[/}}/, 			continuePartialString, 	'/string/'],
 	[/"/, 			endPartialString,		'string'],
 
 	[/'/,			beginStringGen('string1')],
@@ -105,8 +105,10 @@ var actions = [
 		m => token('ADD', m)],
 	[/>=|<=|==|>|<|~=/,
 		m => token('CMP', m)],
+	[/and|or/,
+		m => token('AND', m)],
 
-	[/if|elseif|then|else|fn|while|for|do|end|and|or|nil|self/,
+	[/if|elseif|then|else|fn|while|for|do|end|nil|self/,
 		m => token(m, m)],
 
 	[/[a-zA-Z\$_]+\d*\w*/,
@@ -118,7 +120,7 @@ var actions = [
 	[/\d+(?:\.\d+(?:[eE]-?\d+)?)?/,
 		m => token('NUM', parseFloat(m), m)],
 
-	[/\[|{|\(|\]|}|\)|\.|=|,|\:/,
+	[/\[|{|\(|\]|}|\)|\.|=|,|\:|\|/,
 		m => token(m, m)],
 
 	[/\n|;/,
@@ -171,13 +173,13 @@ var grammars = [
 		return set
 	}],
 
-	['exp', ['primary']],
+	['exp', ['sprimary']],
 //	['exp', ['primary', 'explist'],
 //		(f, a) => (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a)],
 	['exp', ['NOT', 'exp'],
 		(o, e) => [o, e]],
-	['exp', ['(', 'ADD', 'exp', ')'],
-		(_l, o, e2, _r) => [o, e2]],
+	['exp', ['exp', 'AND', 'exp'],
+		(e1, o, e2) => [o, e1, e2]],
 	['exp', ['exp', 'CMP', 'exp'],
 		(e1, o, e2) => [o, e1, e2]],
 	['exp', ['exp', 'ADD', 'exp'],
@@ -186,10 +188,10 @@ var grammars = [
 		(e1, o, e2) => [o, e1, e2]],
 	['exp', ['exp', 'POWER', 'exp'],
 		(e1, o, e2) => [o, e1, e2]],
-	['exp', ['exp', 'and', 'exp'],
-		(e1, o, e2) => ['let', '_', e1, ['if', '_', e2, '_']]],
-	['exp', ['exp', 'or', 'exp'],
-		(e1, o, e2) => ['let', '_', e1, ['if', '_', '_', e2]]],
+
+	['sprimary', ['primary']],
+	['sprimary', ['ADD', 'primary'],
+		(a, p) => [a, 0, p]],
 
 	['primary', ['ID']],
 	['primary', ['literal']],
@@ -209,13 +211,11 @@ var grammars = [
 	['primary', ['while', 'exp', 'do', 'block', 'end'],
 		(_while, e, _do, b, _end) => ['while', ['lambda', e], ['lambda', b]]],
 	['primary', ['primary', 'args'],
-		(f, a) => f[0] === '.' ?
-			['apply', ':', 'self', ['dict', null, f[1], null, f[2]].concat(a)] :
-			['apply', f, 'self', ['dict'].concat(a)]],
+		(f, a) => f[0] === '.' ? [':', f[1], f[2]].concat(a) : [f].concat(a)],
 	['primary', ['fn', 'pars', 'block', 'end'],
 		(_func, p, b, _end) => ['lambda'].concat(p).concat([b])],
-	['primary', ['fn', '[', 'block', ']'],
-		(_func, _l, b, _r) => ['lambda', 'x', 'y', 'z', 'u', 'v', 'w'].concat([b])],
+	['primary', ['{', '|', 'idlist', '|', 'block', '}'],
+		(_l, _s, p, _d, b, _end) => ['lambda'].concat(p).concat([b])],
 
 	['cstr', ['PSTR'],
 		(p) => token('STR', p.value)],
@@ -258,8 +258,20 @@ var grammars = [
 	// function args
 	['args', ['(', ')'],
 		(d) => [ ]],
-	['args', ['(', 'fieldlist', ')'],
+	['args', ['(', 'arglist', ')'],
 		(_l, d, _r) => d],
+	['args', ['(', 'arglist', 'fieldsep', ')'],
+		(_l, d, _r) => d],
+
+	['arglist', ['arg'],
+		(f) => [f]],
+	['arglist', ['arglist', 'fieldsep', 'arg'],
+		(l, _c, f) => l.concat([f])],
+
+	['arg', ['exp'],
+		(e) => e],
+	['arg', ['ID', '=', 'exp'],
+		(i, _eq, e) => ['name=arg', token('STR', i.value), e]],
 
 	// for iterator
 	['iterator', ['exp'],
@@ -285,26 +297,37 @@ var grammars = [
 	['literal', ['nil']],
 	['literal', ['self']],
 	['literal', ['tableconst']],
+	['literal', ['arrayconst']],
+
+	// array constructor
+	['arrayconst', ['[', 'explist', ']'],
+		(_l, e, _r) => ['array'].concat(e)],
 
 	// table constructor
 	['tableconst', ['{', '}'],
 		(t) => ['dict']],
 	['tableconst', ['{', 'fieldlist', '}'],
 		(_l, t, _r) => ['dict'].concat(t)],
-	['tableconst', ['{', 'fieldlist', ',', '}'],
+	['tableconst', ['{', 'fieldlist', 'fieldsep', '}'],
 		(_l, t, _c, _r) => ['dict'].concat(t)],
 
-	['fieldlist', ['field']],
-	['fieldlist', ['fieldlist', ',', 'field'],
+	['fieldlist', ['field'],
+		(f) => f],
+	['fieldlist', ['fieldlist', 'fieldsep', 'field'],
 		(l, _c, f) => l.concat(f)],
 
-	['field', ['exp'],
-		(e) => [null, e]],
+	['fieldsep', [',']],
+	['fieldsep', ['NEWLINE']],
+
+	['field', ['ID'],
+		(i) => [token('STR', i.value), i]],
 	['field', ['ID', '=', 'exp'],
-		(i, _eq, e) => [token('STR', i.value, ''), e]],
+		(i, _eq, e) => [token('STR', i.value), e]],
 	['field', ['NUM', '=', 'exp'],
-		(i, _eq, e) => [token('STR', i.value, ''), e]],
+		(i, _eq, e) => [token('STR', i.value), e]],
 	['field', ['STR', '=', 'exp'],
+		(i, _eq, e) => [i, e]],
+	['field', ['PSTR', '=', 'exp'],
 		(i, _eq, e) => [i, e]],
 	['field', ['[', 'exp', ']', '=', 'exp'],
 		(_l, e1, _r, _eq, e2) => [e1, e2]],
@@ -312,20 +335,11 @@ var grammars = [
 
 var precedence = {
 	NOT: [20, 'right'],
-	'(': [15, 'right'],
-	')': [15, 'left'],
-	'[': [15, 'right'],
-	']': [15, 'left'],
 	POWER: [14, 'right'],
 	MUL: [13, 'left'],
 	ADD: [12, 'left'],
 	CMP: [11, 'left'],
-	and: [10, 'left'],
-	or: [10, 'left'],
-	'.': [5, 'left'],
-	'=': [2, 'right'],
-	',': [2, 'left'],
-	'NEWLINE': [1, 'left'],
+	AND: [10, 'left'],
 }
 
 var yajily = typeof(window) !== 'undefined' ? window.yajily : require('../../yajily')

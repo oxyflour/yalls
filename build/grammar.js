@@ -68,7 +68,7 @@
 	var actions = [
 
 	// strings
-	[/"/, beginStringGen('string')], [/\\[ntr"]/, escapeString, 'string'], [/[^\\"\${]*/, addString, 'string'], [/[\${]/, addString, 'string'], [/\${/, breakPartialString, 'string'], [/}/, continuePartialString, '/string/'], [/"/, endPartialString, 'string'], [/'/, beginStringGen('string1')], [/\\[ntr']/, escapeString, 'string1'], [/[^\\']*/, addString, 'string1'], [/'/, endString, 'string1'],
+	[/"/, beginStringGen('string')], [/\\[ntr"]/, escapeString, 'string'], [/[^\\"{]*/, addString, 'string'], [/{/, addString, 'string'], [/{{/, breakPartialString, 'string'], [/}}/, continuePartialString, '/string/'], [/"/, endPartialString, 'string'], [/'/, beginStringGen('string1')], [/\\[ntr']/, escapeString, 'string1'], [/[^\\']*/, addString, 'string1'], [/'/, endString, 'string1'],
 
 	// continue line
 	[/\.\./, beginCommentGen('continue')], [/[^\n]+/, eatComment, 'continue'], [/\n/, endComment, 'continue'],
@@ -84,7 +84,9 @@
 		return token('ADD', m);
 	}], [/>=|<=|==|>|<|~=/, function (m) {
 		return token('CMP', m);
-	}], [/if|elseif|then|else|fn|while|for|do|end|and|or|nil|self/, function (m) {
+	}], [/and|or/, function (m) {
+		return token('AND', m);
+	}], [/if|elseif|then|else|fn|while|for|do|end|nil|self/, function (m) {
 		return token(m, m);
 	}], [/[a-zA-Z\$_]+\d*\w*/, function (m) {
 		return token('ID', m);
@@ -95,7 +97,7 @@
 		return token('NUM', parseInt(m), m);
 	}], [/\d+(?:\.\d+(?:[eE]-?\d+)?)?/, function (m) {
 		return token('NUM', parseFloat(m), m);
-	}], [/\[|{|\(|\]|}|\)|\.|=|,|\:/, function (m) {
+	}], [/\[|{|\(|\]|}|\)|\.|=|,|\:|\|/, function (m) {
 		return token(m, m);
 	}], [/\n|;/, function (m) {
 		return token('NEWLINE', ';', m);
@@ -124,13 +126,13 @@
 			Array.isArray(a) && a[0] === '.' ? set.push(a[1], ['.', a[1], a[2], le[i]]) : set.push(a, le[i]);
 		});
 		return set;
-	}], ['exp', ['primary']],
+	}], ['exp', ['sprimary']],
 	//	['exp', ['primary', 'explist'],
 	//		(f, a) => (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a)],
 	['exp', ['NOT', 'exp'], function (o, e) {
 		return [o, e];
-	}], ['exp', ['(', 'ADD', 'exp', ')'], function (_l, o, e2, _r) {
-		return [o, e2];
+	}], ['exp', ['exp', 'AND', 'exp'], function (e1, o, e2) {
+		return [o, e1, e2];
 	}], ['exp', ['exp', 'CMP', 'exp'], function (e1, o, e2) {
 		return [o, e1, e2];
 	}], ['exp', ['exp', 'ADD', 'exp'], function (e1, o, e2) {
@@ -139,10 +141,8 @@
 		return [o, e1, e2];
 	}], ['exp', ['exp', 'POWER', 'exp'], function (e1, o, e2) {
 		return [o, e1, e2];
-	}], ['exp', ['exp', 'and', 'exp'], function (e1, o, e2) {
-		return ['let', '_', e1, ['if', '_', e2, '_']];
-	}], ['exp', ['exp', 'or', 'exp'], function (e1, o, e2) {
-		return ['let', '_', e1, ['if', '_', '_', e2]];
+	}], ['sprimary', ['primary']], ['sprimary', ['ADD', 'primary'], function (a, p) {
+		return [a, 0, p];
 	}], ['primary', ['ID']], ['primary', ['literal']], ['primary', ['cstr']], ['primary', ['(', 'exp', ')'], function (_l, c, _r) {
 		return c;
 	}], ['primary', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
@@ -158,11 +158,11 @@
 	}], ['primary', ['while', 'exp', 'do', 'block', 'end'], function (_while, e, _do, b, _end) {
 		return ['while', ['lambda', e], ['lambda', b]];
 	}], ['primary', ['primary', 'args'], function (f, a) {
-		return f[0] === '.' ? ['apply', ':', 'self', ['dict', null, f[1], null, f[2]].concat(a)] : ['apply', f, 'self', ['dict'].concat(a)];
+		return f[0] === '.' ? [':', f[1], f[2]].concat(a) : [f].concat(a);
 	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_func, p, b, _end) {
 		return ['lambda'].concat(p).concat([b]);
-	}], ['primary', ['fn', '[', 'block', ']'], function (_func, _l, b, _r) {
-		return ['lambda', 'x', 'y', 'z', 'u', 'v', 'w'].concat([b]);
+	}], ['primary', ['{', '|', 'idlist', '|', 'block', '}'], function (_l, _s, p, _d, b, _end) {
+		return ['lambda'].concat(p).concat([b]);
 	}], ['cstr', ['PSTR'], function (p) {
 		return token('STR', p.value);
 	}], ['cstr', ['cstr', 'exp', 'PSTR'], function (c, e, p) {
@@ -199,8 +199,18 @@
 	// function args
 	['args', ['(', ')'], function (d) {
 		return [];
-	}], ['args', ['(', 'fieldlist', ')'], function (_l, d, _r) {
+	}], ['args', ['(', 'arglist', ')'], function (_l, d, _r) {
 		return d;
+	}], ['args', ['(', 'arglist', 'fieldsep', ')'], function (_l, d, _r) {
+		return d;
+	}], ['arglist', ['arg'], function (f) {
+		return [f];
+	}], ['arglist', ['arglist', 'fieldsep', 'arg'], function (l, _c, f) {
+		return l.concat([f]);
+	}], ['arg', ['exp'], function (e) {
+		return e;
+	}], ['arg', ['ID', '=', 'exp'], function (i, _eq, e) {
+		return ['name=arg', token('STR', i.value), e];
 	}],
 
 	// for iterator
@@ -222,24 +232,30 @@
 	}],
 
 	// literal
-	['literal', ['NUM']], ['literal', ['STR']], ['literal', ['nil']], ['literal', ['self']], ['literal', ['tableconst']],
+	['literal', ['NUM']], ['literal', ['STR']], ['literal', ['nil']], ['literal', ['self']], ['literal', ['tableconst']], ['literal', ['arrayconst']], ['arrayconst', ['[', 'explist', ']'], function (_l, e, _r) {
+		return ['array'].concat(e);
+	}],
 
 	// table constructor
 	['tableconst', ['{', '}'], function (t) {
 		return ['dict'];
 	}], ['tableconst', ['{', 'fieldlist', '}'], function (_l, t, _r) {
 		return ['dict'].concat(t);
-	}], ['tableconst', ['{', 'fieldlist', ',', '}'], function (_l, t, _c, _r) {
+	}], ['tableconst', ['{', 'fieldlist', 'fieldsep', '}'], function (_l, t, _c, _r) {
 		return ['dict'].concat(t);
-	}], ['fieldlist', ['field']], ['fieldlist', ['fieldlist', ',', 'field'], function (l, _c, f) {
+	}], ['fieldlist', ['field'], function (f) {
+		return f;
+	}], ['fieldlist', ['fieldlist', 'fieldsep', 'field'], function (l, _c, f) {
 		return l.concat(f);
-	}], ['field', ['exp'], function (e) {
-		return [null, e];
+	}], ['fieldsep', [',']], ['fieldsep', ['NEWLINE']], ['field', ['ID'], function (i) {
+		return [token('STR', i.value), i];
 	}], ['field', ['ID', '=', 'exp'], function (i, _eq, e) {
-		return [token('STR', i.value, ''), e];
+		return [token('STR', i.value), e];
 	}], ['field', ['NUM', '=', 'exp'], function (i, _eq, e) {
-		return [token('STR', i.value, ''), e];
+		return [token('STR', i.value), e];
 	}], ['field', ['STR', '=', 'exp'], function (i, _eq, e) {
+		return [i, e];
+	}], ['field', ['PSTR', '=', 'exp'], function (i, _eq, e) {
 		return [i, e];
 	}], ['field', ['[', 'exp', ']', '=', 'exp'], function (_l, e1, _r, _eq, e2) {
 		return [e1, e2];
@@ -247,20 +263,11 @@
 
 	var precedence = {
 		NOT: [20, 'right'],
-		'(': [15, 'right'],
-		')': [15, 'left'],
-		'[': [15, 'right'],
-		']': [15, 'left'],
 		POWER: [14, 'right'],
 		MUL: [13, 'left'],
 		ADD: [12, 'left'],
 		CMP: [11, 'left'],
-		and: [10, 'left'],
-		or: [10, 'left'],
-		'.': [5, 'left'],
-		'=': [2, 'right'],
-		',': [2, 'left'],
-		'NEWLINE': [1, 'left']
+		AND: [10, 'left']
 	};
 
 	var yajily = typeof window !== 'undefined' ? window.yajily : require('../../yajily');

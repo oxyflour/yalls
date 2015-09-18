@@ -5,46 +5,40 @@
 <button onclick="execute()">Execute</button>
 <textarea id="input" style="width:100%" rows="10">
 
-buildHtml = fn(env)
-  get = env.get
+htmlEnv = fn(env)
   env.get = fn(name)
-    get.call(env, name) or fn()
-      attrs = for v, k = pair(arga) do "${ k }=\"${ v }\"" end
+    prelude.get(name) or fn()
+      attrs = for v, k = pair(arga) do "{{ k }}=\"{{ v }}\"" end
       tag = attrs.length and name + ' ' + attrs.join('') or name
       if args.length then
-        "<${ tag }>${ args.join('') }</${ name }>"
+      	"<{{ tag }}>{{ args.join('') }}</{{ name }}>"
       else
-        "<${ tag } />"
+      	"<{{ tag }} />"
       end
     end
   end
 end
 
-text = do buildHtml(local)
-  html(
-    head(
-      meta(charset = 'utf-8')),
-    body(class = 'main',
-      h1(id = 'title', 'Hello World'),
-      p('blablabla')))
-end
-
-echo(text)
+$('#result').append(do htmlEnv(local)
+  div(class = 'main'
+    h1(id = 'title'
+      'Hello World!')
+    p(
+      'from another world '
+      b('#3712')))
+end)
 
 </textarea>
 
 
 <b>RESULT</b>:
 <button onclick="$('#tree').toggle()">show parse tree</button>
-<pre id="tree" style="display:none">
-</pre>
-<div id="result">
-loading...
-</div>
+<pre id="tree" style="display:none"></pre>
+<div id="result"> loading... </div>
 <small id="time"></small>
 
-<script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.6.15/browser-polyfill.min.js"></script>
+<script src="//libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/babel-core/5.6.15/browser-polyfill.min.js"></script>
 <script src="../yajily/build/lexer.js"></script>
 <script src="../yajily/build/parser.js"></script>
 <script src="build/interpreter.js"></script>
@@ -54,12 +48,12 @@ loading...
 
 function format(tree, depth) {
 	depth = depth || 0
-	var space = Array.apply(null, Array(depth))
+	var space = Array.apply(undefined, Array(depth))
 			.map(function(v){ return '|  '}).join('')
 	if (typeof(tree) !== typeof({ })) {
 		return tree + '\n'
 	}
-	else if (depth < 20) {
+	else if (depth < 50) {
 		var text = '\n'
 		for (var key in tree)
 			if (tree.hasOwnProperty(key))
@@ -71,8 +65,8 @@ function format(tree, depth) {
 function compile(tree) {
 	if (Array.isArray(tree))
 		return tree.map(compile)
-	else if (tree === undefined || tree === null)
-		return null
+	else if (tree === null)
+		return undefined
 	else if (tree.type === 'STR')
 		return '"' + tree.value
 	else if (tree.value !== undefined)
@@ -100,14 +94,13 @@ function execute() {
 	}
 }
 
-var env = evaluate.environment(null, predule)
-// inject function
+var env = evaluate.environment(null, prelude)
 env.update('echo', function() {
 	$('<pre></pre>')
 		.text(Array.prototype.slice.call(arguments).join(' '))
 		.appendTo('#result')
 })
-// inject object
+env.update('prelude', env.clone())
 env.update('console', console)
 env.update('$', $)
 
