@@ -1,48 +1,5 @@
 (function() {
 
-// [let var1 val1 var2 val2 exp] =>
-//   [[lambda var1 var2 exp] val1 val2]
-function evalLet(exp, env) {
-	var lambda = [ 'lambda' ],
-		body = [ lambda ]
-	for (var i = 1; i < exp.length - 1; i += 2) {
-		lambda.push(exp[i])
-		body.push(exp[i + 1])
-	}
-	lambda.push(exp[exp.length - 1])
-	return evaluate(body, env)
-}
-
-// [set var1 val1 var2 val2 ... body]
-function evalLetrec(exp, env) {
-	var pair = [ ]
-	for (var i = 1; i < exp.length - 1; i += 2)
-		pair.push(exp[i], evaluate(exp[i + 1], env))
-	env = environment(env)
-	for (var i = 0; i < pair.length - 1; i += 2)
-		env.update(pair[i], pair[i + 1])
-	return evaluate(exp[exp.length - 1], env)
-}
-
-// [set var1 val1 var2 val2 ...]
-function evalSet(exp, env) {
-	var pair = [ ]
-	for (var i = 1; i < exp.length - 1; i += 2)
-		pair.push(exp[i], evaluate(exp[i + 1], env))
-	var last = undefined
-	for (var i = 0; i < pair.length - 1; i += 2)
-		env.update(pair[i], last = pair[i + 1])
-	return last
-}
-
-// [cond cond1 exp1 cond2 exp2 ... [condi] expi]
-function evalCond(exp, env) {
-	for (var i = 1; i < exp.length - 1; i += 2)
-		if (evaluate(exp[i], env))
-			return evaluate(exp[i + 1], env)
-	return i < exp.length ? evaluate(exp[i], env) : undefined
-}
-
 function environment(parent, local) {
 	local = local || { }
 	var env = {
@@ -111,20 +68,10 @@ function apply(exp, env) {
 function evaluate(exp, env) {
 	if (Array.isArray(exp)) {
 		var head = exp[0]
-		if (head === 'let')
-			return evalLet(exp, env)
-		else if (head === 'letrec')
-			return evalLetrec(exp, env)
-		else if (head === 'set')
-			return evalSet(exp, env)
-		else if (head === 'if')
-			return evalCond(exp, env)
-		else if (head === 'and')
-			return evaluate(exp[1], env) && evaluate(exp[2], env)
-		else if (head === 'or')
-			return evaluate(exp[1], env) || evaluate(exp[2], env)
-		else if (head === 'lambda')
+		if (head === 'lambda')
 			return closure(exp, env)
+		else if (head = stmts[head])
+			return head(exp, env)
 		else
 			return apply(exp, env)
 	}
@@ -137,6 +84,69 @@ function evaluate(exp, env) {
 	else {
 		return exp
 	}
+}
+
+var stmts = {
+
+	// [let var1 val1 var2 val2 exp] =>
+	//   [[lambda var1 var2 exp] val1 val2]
+	'let': function(exp, env) {
+		var lambda = [ 'lambda' ],
+			body = [ lambda ]
+		for (var i = 1; i < exp.length - 1; i += 2) {
+			lambda.push(exp[i])
+			body.push(exp[i + 1])
+		}
+		lambda.push(exp[exp.length - 1])
+		return evaluate(body, env)
+	},
+
+	// [set var1 val1 var2 val2 ... body]
+	'letrec': function(exp, env) {
+		var pair = [ ]
+		for (var i = 1; i < exp.length - 1; i += 2)
+			pair.push(exp[i], evaluate(exp[i + 1], env))
+		env = environment(env)
+		for (var i = 0; i < pair.length - 1; i += 2)
+			env.update(pair[i], pair[i + 1])
+		return evaluate(exp[exp.length - 1], env)
+	},
+
+	// [set var1 val1 var2 val2 ...]
+	'set': function(exp, env) {
+		var pair = [ ]
+		for (var i = 1; i < exp.length - 1; i += 2)
+			pair.push(exp[i], evaluate(exp[i + 1], env))
+		var last = undefined
+		for (var i = 0; i < pair.length - 1; i += 2)
+			env.update(pair[i], last = pair[i + 1])
+		return last
+	},
+
+	// [if cond1 exp1 cond2 exp2 ... [condi] expi]
+	'if': function(exp, env) {
+		for (var i = 1; i < exp.length - 1; i += 2)
+			if (evaluate(exp[i], env))
+				return evaluate(exp[i + 1], env)
+		return i < exp.length ? evaluate(exp[i], env) : undefined
+	},
+
+	// [while test body]
+	'while': function(exp, env) {
+		var last
+		while (evaluate(exp[1], env))
+			last = evaluate(exp[2], env)
+		return last
+	},
+
+	'and': function(exp, env) {
+		return evaluate(exp[1], env) && evaluate(exp[2], env)
+	},
+
+	'or': function(exp, env) {
+		return evaluate(exp[1], env) || evaluate(exp[2], env)
+	},
+
 }
 
 evaluate.environment = environment

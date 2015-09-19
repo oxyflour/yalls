@@ -77,7 +77,7 @@
 	[/--/, beginCommentGen('comment-sl')], [/[^\n]+/, eatComment, 'comment-sl'], [/\n/, endCommentWithNewLine, 'comment-sl'], [/--\[\[/, beginCommentGen('comment-ml')], [/.*?--\]\]/, endComment, 'comment-ml'], [/.*/, eatComment, 'comment-ml'], [/\n/, eatComment, 'comment-ml'], [/not/, function (m) {
 		return token('NOT', m);
 	}], [/\^/, function (m) {
-		return token('POWER', m);
+		return token('POW', m);
 	}], [/\*|\/|%/, function (m) {
 		return token('MUL', m);
 	}], [/\+|-/, function (m) {
@@ -139,11 +139,11 @@
 		return [o, e1, e2];
 	}], ['exp', ['exp', 'MUL', 'exp'], function (e1, o, e2) {
 		return [o, e1, e2];
-	}], ['exp', ['exp', 'POWER', 'exp'], function (e1, o, e2) {
+	}], ['exp', ['exp', 'POW', 'exp'], function (e1, o, e2) {
 		return [o, e1, e2];
-	}], ['sprimary', ['primary']], ['sprimary', ['ADD', 'primary'], function (a, p) {
+	}], ['sprimary', ['primary']], ['sprimary', ['cstr']], ['sprimary', ['ADD', 'primary'], function (a, p) {
 		return [a, 0, p];
-	}], ['primary', ['ID']], ['primary', ['literal']], ['primary', ['cstr']], ['primary', ['(', 'exp', ')'], function (_l, c, _r) {
+	}], ['primary', ['ID']], ['primary', ['literal']], ['primary', ['(', 'exp', ')'], function (_l, c, _r) {
 		return c;
 	}], ['primary', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
 		return ['.', p, e];
@@ -156,7 +156,7 @@
 	}], ['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'], function (_for, i, _eq, t, _do, b, _end) {
 		return ['for', t, ['lambda'].concat(i).concat([b])];
 	}], ['primary', ['while', 'exp', 'do', 'block', 'end'], function (_while, e, _do, b, _end) {
-		return ['while', ['lambda', e], ['lambda', b]];
+		return ['while', e, b];
 	}], ['primary', ['primary', 'args'], function (f, a) {
 		return f[0] === '.' ? [':', f[1], f[2]].concat(a) : [f].concat(a);
 	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_func, p, b, _end) {
@@ -211,6 +211,10 @@
 		return e;
 	}], ['arg', ['ID', '=', 'exp'], function (i, _eq, e) {
 		return ['name=arg', token('STR', i.value), e];
+	}], ['arg', ['STR', '=', 'exp'], function (i, _eq, e) {
+		return ['name=arg', i, e];
+	}], ['arg', ['PSTR', '=', 'exp'], function (i, _eq, e) {
+		return ['name=arg', i, e];
 	}],
 
 	// for iterator
@@ -232,7 +236,10 @@
 	}],
 
 	// literal
-	['literal', ['NUM']], ['literal', ['STR']], ['literal', ['nil']], ['literal', ['self']], ['literal', ['tableconst']], ['literal', ['arrayconst']], ['arrayconst', ['[', 'explist', ']'], function (_l, e, _r) {
+	['literal', ['NUM']], ['literal', ['STR']], ['literal', ['nil']], ['literal', ['self']], ['literal', ['tableconst']], ['literal', ['arrayconst']],
+
+	// array constructor
+	['arrayconst', ['[', 'explist', ']'], function (_l, e, _r) {
 		return ['array'].concat(e);
 	}],
 
@@ -262,8 +269,8 @@
 	}]];
 
 	var precedence = {
-		NOT: [20, 'right'],
-		POWER: [14, 'right'],
+		POW: [20, 'right'],
+		NOT: [14, 'right'],
 		MUL: [13, 'left'],
 		ADD: [12, 'left'],
 		CMP: [11, 'left'],

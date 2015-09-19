@@ -98,7 +98,7 @@ var actions = [
 	[/not/,
 		m => token('NOT', m)],
 	[/\^/,
-		m => token('POWER', m)],
+		m => token('POW', m)],
 	[/\*|\/|%/,
 		m => token('MUL', m)],
 	[/\+|-/,
@@ -186,16 +186,16 @@ var grammars = [
 		(e1, o, e2) => [o, e1, e2]],
 	['exp', ['exp', 'MUL', 'exp'],
 		(e1, o, e2) => [o, e1, e2]],
-	['exp', ['exp', 'POWER', 'exp'],
+	['exp', ['exp', 'POW', 'exp'],
 		(e1, o, e2) => [o, e1, e2]],
 
 	['sprimary', ['primary']],
+	['sprimary', ['cstr']],
 	['sprimary', ['ADD', 'primary'],
 		(a, p) => [a, 0, p]],
 
 	['primary', ['ID']],
 	['primary', ['literal']],
-	['primary', ['cstr']],
 	['primary', ['(', 'exp', ')'],
 		(_l, c, _r) => c],
 	['primary', ['primary', '[', 'exp', ']'],
@@ -209,7 +209,7 @@ var grammars = [
 	['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'],
 		(_for, i, _eq, t, _do, b, _end) => ['for', t, ['lambda'].concat(i).concat([b])]],
 	['primary', ['while', 'exp', 'do', 'block', 'end'],
-		(_while, e, _do, b, _end) => ['while', ['lambda', e], ['lambda', b]]],
+		(_while, e, _do, b, _end) => ['while', e, b]],
 	['primary', ['primary', 'args'],
 		(f, a) => f[0] === '.' ? [':', f[1], f[2]].concat(a) : [f].concat(a)],
 	['primary', ['fn', 'pars', 'block', 'end'],
@@ -272,6 +272,10 @@ var grammars = [
 		(e) => e],
 	['arg', ['ID', '=', 'exp'],
 		(i, _eq, e) => ['name=arg', token('STR', i.value), e]],
+	['arg', ['STR', '=', 'exp'],
+		(i, _eq, e) => ['name=arg', i, e]],
+	['arg', ['PSTR', '=', 'exp'],
+		(i, _eq, e) => ['name=arg', i, e]],
 
 	// for iterator
 	['iterator', ['exp'],
@@ -334,8 +338,8 @@ var grammars = [
 ]
 
 var precedence = {
-	NOT: [20, 'right'],
-	POWER: [14, 'right'],
+	POW: [20, 'right'],
+	NOT: [14, 'right'],
 	MUL: [13, 'left'],
 	ADD: [12, 'left'],
 	CMP: [11, 'left'],

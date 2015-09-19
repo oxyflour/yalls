@@ -24,6 +24,8 @@ var root = {
 
 	'PI': Math.PI,
 
+	'not': (a) => !a,
+
 	'^': (a, b) => Math.pow(a, b),
 
 	'*': (a, b) => a * b,
@@ -41,13 +43,6 @@ var root = {
 
 	'begin': function() {
 		return arguments[arguments.length - 1]
-	},
-
-	'while': function(test, func) {
-		var ret
-		while (test())
-			ret = func()
-		return ret
 	},
 
 	'for': function(iterator, func) {

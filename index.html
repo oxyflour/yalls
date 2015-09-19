@@ -3,13 +3,14 @@
 <body>
 <b>INPUT</b>:
 <button onclick="execute()">Execute</button>
-<textarea id="input" style="width:100%" rows="10">
-
-htmlEnv = fn(env)
+<div id="input" style="width:100%;height:360px" rows="10">
+</div>
+<script id="input_sample" type="script/x-lua">
+htmlBuilder = fn(env)
   env.get = fn(name)
     prelude.get(name) or fn()
       attrs = for v, k = pair(arga) do "{{ k }}=\"{{ v }}\"" end
-      tag = attrs.length and name + ' ' + attrs.join('') or name
+      tag = attrs.length and name + ' ' + attrs.join(' ') or name
       if args.length then
       	"<{{ tag }}>{{ args.join('') }}</{{ name }}>"
       else
@@ -19,18 +20,21 @@ htmlEnv = fn(env)
   end
 end
 
-$('#result').append(do htmlEnv(local)
-  div(class = 'main'
-    h1(id = 'title'
+text = do htmlBuilder(local)
+
+  div(class="main"
+    h1(id="title"
       'Hello World!')
-    p(
-      'from another world '
-      b('#3712')))
-end)
+    p(style="color:blue"
+      'from ', big('#3512'))
+    input(onclick="alert('ya')", type="submit"))
 
-</textarea>
+end
 
+console.log(text)
+$('#result').append(text)
 
+</script>
 <b>RESULT</b>:
 <button onclick="$('#tree').toggle()">show parse tree</button>
 <pre id="tree" style="display:none"></pre>
@@ -39,11 +43,20 @@ end)
 
 <script src="//libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/babel-core/5.6.15/browser-polyfill.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ace.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/mode-lua.js"></script>
 <script src="../yajily/build/lexer.js"></script>
 <script src="../yajily/build/parser.js"></script>
 <script src="build/interpreter.js"></script>
 <script src="build/grammar.js"></script>
 <script src="build/prelude.js"></script>
+<script>
+
+	var editor = ace.edit('input')
+	editor.getSession().setMode('ace/mode/lua')
+	editor.setValue($('#input_sample').text(), 1)
+
+</script>
 <script>
 
 function format(tree, depth) {
@@ -80,7 +93,7 @@ function execute() {
 	$('#result').empty()
 	$('#tree').empty()
 	try {
-		var input = $('#input').val(),
+		var input = editor.getValue(),
 			tree = grammar.parse(input, table),
 			code = compile(tree)
 		$('#tree').text(format(code))

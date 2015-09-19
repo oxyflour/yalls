@@ -27,6 +27,10 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 		'PI': Math.PI,
 
+		'not': function not(a) {
+			return !a;
+		},
+
 		'^': function _(a, b) {
 			return Math.pow(a, b);
 		},
@@ -66,12 +70,6 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 		'begin': function begin() {
 			return arguments[arguments.length - 1];
-		},
-
-		'while': function _while(test, func) {
-			var ret;
-			while (test()) ret = func();
-			return ret;
 		},
 
 		'for': function _for(iterator, func) {
