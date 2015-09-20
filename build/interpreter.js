@@ -2,8 +2,18 @@
 
 (function () {
 
+	Function.prototype.apply2 = function (self, args, arga) {
+		if (!this.extraArgs) this.extraArgs = [];
+
+		this.extraArgs.push(this.arga);
+		this.arga = arga;
+		var ret = this.apply(self, args);
+		this.arga = this.extraArgs.pop();
+
+		return ret;
+	};
+
 	function environment(parent, local) {
-		local = local || {};
 		var env = {
 			clone: function clone(loc) {
 				loc = loc || {};
@@ -16,18 +26,16 @@
 			get: function get(name) {
 				return !parent || name in local ? local[name] : parent.get(name);
 			},
-			/*
-    * overwritting variables in parent env is disabled
-    *
-   set: function(name, value) {
-   	return !parent || name in local ?
-   		(local[name] = value) : parent.set(name, value)
-   },
-    */
+			// overwritting variables in parent env is disabled
+			//		set: function(name, value) {
+			//			return !parent || name in local ?
+			//				(local[name] = value) : parent.set(name, value)
+			//		},
 			update: function update(name, value) {
 				return local[name] = value;
 			}
 		};
+		local = local || {};
 		env.update('local', env);
 		return env;
 	}
@@ -57,8 +65,7 @@
 		});
 
 		var proc = evaluate(exp[0], env);
-		proc.arga = arga;
-		return proc.apply(env.get('self'), args);
+		return proc.apply2(env.get('self'), args, arga);
 	}
 
 	function evaluate(exp, env) {
@@ -112,11 +119,12 @@
 		},
 
 		// [while test body]
-		'while': function _while(exp, env) {
-			var last;
-			while (evaluate(exp[1], env)) last = evaluate(exp[2], env);
-			return last;
-		},
+		//	'while': function(exp, env) {
+		//		var last
+		//		while (evaluate(exp[1], env))
+		//			last = evaluate(exp[2], env)
+		//		return last
+		//	},
 
 		'and': function and(exp, env) {
 			return evaluate(exp[1], env) && evaluate(exp[2], env);
@@ -124,6 +132,24 @@
 
 		'or': function or(exp, env) {
 			return evaluate(exp[1], env) || evaluate(exp[2], env);
+		},
+
+		// [try exp var exp]
+		'try': function _try(exp, env) {
+			try {
+				return evaluate(exp[1], env);
+			} catch (e) {
+				if (exp.length > 3) {
+					env = environment(env);
+					env.update(exp[2], e);
+					return evaluate(exp[3], env);
+				}
+			}
+		},
+
+		// [throw exp]
+		'throw': function _throw(exp, env) {
+			throw evaluate(exp[1], env);
 		}
 
 	};

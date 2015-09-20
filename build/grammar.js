@@ -33,9 +33,10 @@
 		this.pop();
 		return token('STR', this.tempString, m);
 	}
+
 	function breakPartialString(m) {
 		this.push(undefined);
-		return token('PSTR', this.tempString, m);
+		return token('BSTR', this.tempString, m);
 	}
 	function continuePartialString(m) {
 		this.pop();
@@ -44,7 +45,7 @@
 	}
 	function endPartialString(m) {
 		this.pop();
-		return token('PSTR', this.tempString, m);
+		return token('STR', this.tempString, m);
 	}
 
 	function beginCommentGen(tag) {
@@ -86,7 +87,7 @@
 		return token('CMP', m);
 	}], [/and|or/, function (m) {
 		return token('AND', m);
-	}], [/if|elseif|then|else|fn|while|for|do|end|nil|self/, function (m) {
+	}], [/if|elseif|then|else|fn|while|for|do|end|nil|self|try|catch|throw/, function (m) {
 		return token(m, m);
 	}], [/[a-zA-Z\$_]+\d*\w*/, function (m) {
 		return token('ID', m);
@@ -115,7 +116,9 @@
 		return ['begin', s];
 	}], ['stmtlist', ['stmtlist', 'cstmt'], function (l, s) {
 		return l.concat([s]);
-	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']], ['stmt', ['fn', 'fnname', 'pars', 'block', 'end'], function (_func, a, p, b, _end) {
+	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']], ['stmt', ['throw', 'exp'], function (t, e) {
+		return [t, e];
+	}], ['stmt', ['fn', 'fnname', 'pars', 'block', 'end'], function (_func, a, p, b, _end) {
 		var f = ['lambda'].concat(p).concat([b]);
 		// transform [set [. obj key] val] -> [set obj [. obj key val]]
 		return Array.isArray(a) && a[0] === '.' ? ['.', a[1], a[2], f] : ['set', a, f];
@@ -141,9 +144,9 @@
 		return [o, e1, e2];
 	}], ['exp', ['exp', 'POW', 'exp'], function (e1, o, e2) {
 		return [o, e1, e2];
-	}], ['sprimary', ['primary']], ['sprimary', ['cstr']], ['sprimary', ['ADD', 'primary'], function (a, p) {
+	}], ['sprimary', ['primary']], ['sprimary', ['ADD', 'primary'], function (a, p) {
 		return [a, 0, p];
-	}], ['primary', ['ID']], ['primary', ['literal']], ['primary', ['(', 'exp', ')'], function (_l, c, _r) {
+	}], ['primary', ['ID']], ['primary', ['cstr']], ['primary', ['literal']], ['primary', ['(', 'exp', ')'], function (_l, c, _r) {
 		return c;
 	}], ['primary', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
 		return ['.', p, e];
@@ -155,18 +158,23 @@
 		return ['if'].concat(c);
 	}], ['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'], function (_for, i, _eq, t, _do, b, _end) {
 		return ['for', t, ['lambda'].concat(i).concat([b])];
-	}], ['primary', ['while', 'exp', 'do', 'block', 'end'], function (_while, e, _do, b, _end) {
-		return ['while', e, b];
-	}], ['primary', ['primary', 'args'], function (f, a) {
+	}],
+	//	['primary', ['while', 'exp', 'do', 'block', 'end'],
+	//		(_while, e, _do, b, _end) => ['while', e, b]],
+	['primary', ['primary', 'args'], function (f, a) {
 		return f[0] === '.' ? [':', f[1], f[2]].concat(a) : [f].concat(a);
 	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_func, p, b, _end) {
 		return ['lambda'].concat(p).concat([b]);
 	}], ['primary', ['{', '|', 'idlist', '|', 'block', '}'], function (_l, _s, p, _d, b, _end) {
 		return ['lambda'].concat(p).concat([b]);
-	}], ['cstr', ['PSTR'], function (p) {
-		return token('STR', p.value);
-	}], ['cstr', ['cstr', 'exp', 'PSTR'], function (c, e, p) {
-		return ['+', ['+', c, e], token('STR', p.value)];
+	}], ['primary', ['try', 'block', 'catch', 'ID', 'do', 'block', 'end'], function (_try, b, _catch, i, _do, d, _end) {
+		return ['try', b, i, d];
+	}], ['cstr', ['cstr1', 'STR'], function (c, s) {
+		return ['+', c, s];
+	}], ['cstr1', ['BSTR', 'exp'], function (b, e) {
+		return ['+', token('STR', b.value), e];
+	}], ['cstr1', ['cstr1', 'BSTR', 'exp'], function (c, b, e) {
+		return ['+', ['+', c, token('STR', b.value)], e];
 	}], ['varlist', ['variable'], function (v) {
 		return [v];
 	}], ['varlist', ['varlist', ',', 'variable'], function (l, _c, v) {
@@ -212,8 +220,6 @@
 	}], ['arg', ['ID', '=', 'exp'], function (i, _eq, e) {
 		return ['name=arg', token('STR', i.value), e];
 	}], ['arg', ['STR', '=', 'exp'], function (i, _eq, e) {
-		return ['name=arg', i, e];
-	}], ['arg', ['PSTR', '=', 'exp'], function (i, _eq, e) {
 		return ['name=arg', i, e];
 	}],
 
@@ -261,8 +267,6 @@
 	}], ['field', ['NUM', '=', 'exp'], function (i, _eq, e) {
 		return [token('STR', i.value), e];
 	}], ['field', ['STR', '=', 'exp'], function (i, _eq, e) {
-		return [i, e];
-	}], ['field', ['PSTR', '=', 'exp'], function (i, _eq, e) {
 		return [i, e];
 	}], ['field', ['[', 'exp', ']', '=', 'exp'], function (_l, e1, _r, _eq, e2) {
 		return [e1, e2];

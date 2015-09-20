@@ -138,17 +138,19 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         return exp;
     }
 
-    function run(exp, env) {
-        exp = anf(exp);
-        exp = (function stmt(exp) {
-            if (Array.isArray(exp)) {
-                exp = exp.map(stmt);
-                exp.isStatement = true;
-            }
-            return exp;
-        })(exp);
+    function stmt(exp) {
+        if (Array.isArray(exp)) {
+            exp = exp.map(stmt);
+            exp.isStatement = true;
+        }
+        return exp;
+    }
 
-        var state = [exp, env];
+    function run(exp, env, kont) {
+        exp = anf(exp);
+        exp = stmt(exp);
+
+        var state = [exp, env, kont];
         while (state[0] && state[0].isStatement || state[2]) state = step.apply(null, state);
         return state[0];
     }

@@ -33,9 +33,10 @@ function endString(m) {
 	this.pop();
 	return token('STR', this.tempString, m)
 }
+
 function breakPartialString(m) {
 	this.push(undefined)
-	return token('PSTR', this.tempString, m)
+	return token('BSTR', this.tempString, m)
 }
 function continuePartialString(m) {
 	this.pop()
@@ -44,7 +45,7 @@ function continuePartialString(m) {
 }
 function endPartialString(m) {
 	this.pop();
-	return token('PSTR', this.tempString, m)
+	return token('STR', this.tempString, m)
 }
 
 function beginCommentGen(tag) {
@@ -108,7 +109,7 @@ var actions = [
 	[/and|or/,
 		m => token('AND', m)],
 
-	[/if|elseif|then|else|fn|while|for|do|end|nil|self/,
+	[/if|elseif|then|else|fn|while|for|do|end|nil|self|try|catch|throw/,
 		m => token(m, m)],
 
 	[/[a-zA-Z\$_]+\d*\w*/,
@@ -157,6 +158,8 @@ var grammars = [
 	['cstmt', ['cstmt', 'NEWLINE']],
 
 	['stmt', ['exp']],
+	['stmt', ['throw', 'exp'],
+		(t, e) => [t, e]],
 	['stmt', ['fn', 'fnname', 'pars', 'block', 'end'], (_func, a, p, b, _end) => {
 		var f = ['lambda'].concat(p).concat([b])
 		// transform [set [. obj key] val] -> [set obj [. obj key val]]
@@ -190,11 +193,11 @@ var grammars = [
 		(e1, o, e2) => [o, e1, e2]],
 
 	['sprimary', ['primary']],
-	['sprimary', ['cstr']],
 	['sprimary', ['ADD', 'primary'],
 		(a, p) => [a, 0, p]],
 
 	['primary', ['ID']],
+	['primary', ['cstr']],
 	['primary', ['literal']],
 	['primary', ['(', 'exp', ')'],
 		(_l, c, _r) => c],
@@ -208,19 +211,23 @@ var grammars = [
 		(_if, c) => ['if'].concat(c)],
 	['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'],
 		(_for, i, _eq, t, _do, b, _end) => ['for', t, ['lambda'].concat(i).concat([b])]],
-	['primary', ['while', 'exp', 'do', 'block', 'end'],
-		(_while, e, _do, b, _end) => ['while', e, b]],
+//	['primary', ['while', 'exp', 'do', 'block', 'end'],
+//		(_while, e, _do, b, _end) => ['while', e, b]],
 	['primary', ['primary', 'args'],
 		(f, a) => f[0] === '.' ? [':', f[1], f[2]].concat(a) : [f].concat(a)],
 	['primary', ['fn', 'pars', 'block', 'end'],
 		(_func, p, b, _end) => ['lambda'].concat(p).concat([b])],
 	['primary', ['{', '|', 'idlist', '|', 'block', '}'],
 		(_l, _s, p, _d, b, _end) => ['lambda'].concat(p).concat([b])],
+	['primary', ['try', 'block', 'catch', 'ID', 'do', 'block', 'end'],
+		(_try, b, _catch, i, _do, d, _end) => ['try', b, i, d]],
 
-	['cstr', ['PSTR'],
-		(p) => token('STR', p.value)],
-	['cstr', ['cstr', 'exp', 'PSTR'],
-		(c, e, p) => ['+', ['+', c, e], token('STR', p.value)]],
+	['cstr', ['cstr1', 'STR'],
+		(c, s) => ['+', c, s]],
+	['cstr1', ['BSTR', 'exp'],
+		(b, e) => ['+', token('STR', b.value), e]],
+	['cstr1', ['cstr1', 'BSTR', 'exp'],
+		(c, b, e) => ['+', ['+', c, token('STR', b.value)], e]],
 
 	['varlist', ['variable'],
 		(v) => [v]],
@@ -273,8 +280,6 @@ var grammars = [
 	['arg', ['ID', '=', 'exp'],
 		(i, _eq, e) => ['name=arg', token('STR', i.value), e]],
 	['arg', ['STR', '=', 'exp'],
-		(i, _eq, e) => ['name=arg', i, e]],
-	['arg', ['PSTR', '=', 'exp'],
 		(i, _eq, e) => ['name=arg', i, e]],
 
 	// for iterator
@@ -330,8 +335,6 @@ var grammars = [
 	['field', ['NUM', '=', 'exp'],
 		(i, _eq, e) => [token('STR', i.value), e]],
 	['field', ['STR', '=', 'exp'],
-		(i, _eq, e) => [i, e]],
-	['field', ['PSTR', '=', 'exp'],
 		(i, _eq, e) => [i, e]],
 	['field', ['[', 'exp', ']', '=', 'exp'],
 		(_l, e1, _r, _eq, e2) => [e1, e2]],

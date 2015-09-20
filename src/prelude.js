@@ -2,18 +2,26 @@
 
 var self = {
 
-	$seek: function(member) {
+	'.': function(member) {
 		var object = this
 		while (object && object[member] === undefined)
-			object = object.$proto
+			object = object.prototype
 		return (object || self)[member]
 	},
 
-	derive: function() {
-		return {
-			$proto: this,
-			$seek: this.$seek || self.$seek
-		}
+	extend: function e() {
+		var object = { },
+			protos = Array.prototype.slice.call(arguments)
+				.concat(self.extend.arga)
+		protos.forEach(proto => {
+			if (proto) for (var k in proto)
+				if (proto.hasOwnProperty(k))
+					object[k] = proto[k]
+		})
+		object.prototype = this
+		if (object['.'] === undefined)
+			object['.'] = this['.'] || self['.']
+		return object
 	},
 
 }
@@ -102,14 +110,14 @@ var root = {
 	'self': self,
 
 	'.': function(o, k, v) {
-		return arguments.length > 2 ?
-			(o[k] = v, o) : (o && o.$seek || self.$seek).call(o, k)
+		var lookup = o && o['.'] || self['.']
+		return arguments.length > 2 ? (o[k] = v, o) : lookup.call(o, k)
 	},
 
-	':': function(o, k) {
-		var fn = (o && o.$seek || self.$seek).call(o, k)
+	':': function c(o, k) {
+		var lookup = o && o['.'] || self['.'], fn = lookup.call(o, k)
 		if (!fn) throw 'Prelude: method "' + k + '" does not exist on object ' + o
-		return fn.apply(o, Array.prototype.slice.call(arguments).slice(2))
+		return fn.apply2(o, Array.prototype.slice.call(arguments).slice(2), c.arga, c.kont)
 	},
 
 }

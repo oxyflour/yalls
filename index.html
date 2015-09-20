@@ -1,33 +1,80 @@
 <!doctype html>
 <html>
+<head>
+<style>
+  a {
+  	text-decoration: none;
+  }
+  a:hover {
+  	text-decoration: underline;
+  }
+  .node {
+  	font-size: 80%;
+  	display: none;
+  	margin-left: 1em;
+  }
+</style>
+</head>
 <body>
-<b>INPUT</b>:
+<select id="code_samples"></select>
 <button onclick="execute()">Execute</button>
+<small id="time"></small>
 <div id="input" style="width:100%;height:360px" rows="10">
 </div>
-<script id="input_sample" type="script/x-lua">
+<script id="blank" title="Blank" type="script/x-lua">
+
+</script>
+<script id="object_meta_method" title="Object Meta Method" type="script/x-lua">
+lookup = self['.']
+
+a = self.extend(
+        name = 'a'
+		say = fn()
+		    echo('my name is ' + self.name)
+		end
+		'.' = fn(name)
+		    lookup.call(self, name) or fn()
+		        echo("[!] this guy ({{ self.name }}) " +
+		        	"cannot {{ name }} ")
+		    end
+		end)
+a.say()
+
+b = a.extend(name = 'b')
+b.say()
+
+b.cry()
+</script>
+<script id="html_dsl" title="HTML DSL" type="script/x-lua">
 htmlBuilder = fn(env)
-  env.get = fn(name)
-    prelude.get(name) or fn()
-      attrs = for v, k = pair(arga) do "{{ k }}=\"{{ v }}\"" end
-      tag = attrs.length and name + ' ' + attrs.join(' ') or name
-      if args.length then
-      	"<{{ tag }}>{{ args.join('') }}</{{ name }}>"
-      else
-      	"<{{ tag }} />"
-      end
-    end
-  end
+	fns = {
+		css = fn()
+			(for v, k = pair(arga) do
+				"{{ k }}:{{ v }}"
+			end).join(';')
+		end
+	}
+	env.get = fn(name)
+		fns[name] or prelude.get(name) or fn()
+			attrs = for v, k = pair(arga) do "{{ k }}=\"{{ v }}\"" end
+			tag = attrs.length and name + ' ' + attrs.join(' ') or name
+			if args.length then
+				"<{{ tag }}>{{ args.join('') }}</{{ name }}>"
+			else
+				"<{{ tag }} />"
+			end
+		end
+	end
 end
 
 text = do htmlBuilder(local)
 
-  div(class="main"
-    h1(id="title"
-      'Hello World!')
-    p(style="color:blue"
-      'from ', big('#3512'))
-    input(onclick="alert('ya')", type="submit"))
+	div(class="main"
+		h1(id="title"
+			'Hello World!')
+		p(style=css(color="red", 'font-size'="200%")
+			'from ', big('#3512'))
+		input(onclick="alert('ya')", type="submit"))
 
 end
 
@@ -35,11 +82,8 @@ console.log(text)
 $('#result').append(text)
 
 </script>
-<b>RESULT</b>:
-<button onclick="$('#tree').toggle()">show parse tree</button>
-<pre id="tree" style="display:none"></pre>
-<div id="result"> loading... </div>
-<small id="time"></small>
+<div id="tree"></div>
+<pre id="result"> loading... </pre>
 
 <script src="//libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/babel-core/5.6.15/browser-polyfill.min.js"></script>
@@ -52,26 +96,20 @@ $('#result').append(text)
 <script src="build/prelude.js"></script>
 <script>
 
-	var editor = ace.edit('input')
-	editor.getSession().setMode('ace/mode/lua')
-	editor.setValue($('#input_sample').text(), 1)
-
-</script>
-<script>
-
 function format(tree, depth) {
 	depth = depth || 0
-	var space = Array.apply(undefined, Array(depth))
-			.map(function(v){ return '|  '}).join('')
 	if (typeof(tree) !== typeof({ })) {
-		return tree + '\n'
+		return tree
 	}
 	else if (depth < 50) {
-		var text = '\n'
+		var children = [ ]
 		for (var key in tree)
 			if (tree.hasOwnProperty(key))
-				text += space + key + ': ' + format(tree[key], depth + 1)
-		return text
+				children.push('<div class="item">' + 
+					key + ': ' + format(tree[key], depth + 1) + '</div>')
+		return '<a href onclick="$(this).next().toggle();return false">&gt;</a>' + 
+			'<div class="node">' +
+				children.join('') + '</div>'
 	}
 }
 
@@ -96,7 +134,7 @@ function execute() {
 		var input = editor.getValue(),
 			tree = grammar.parse(input, table),
 			code = compile(tree)
-		$('#tree').text(format(code))
+		$('#tree').html(format(code))
 
 		var tickStart = Date.now()
 		evaluate(code, env)
@@ -123,6 +161,33 @@ $.get('build/table.json', function(t) {
 	table = t
 	execute()
 })
+
+</script>
+<script>
+
+	var editor = ace.edit('input')
+	editor.getSession().setMode('ace/mode/lua')
+
+</script>
+<script>
+
+	var select = $('#code_samples')
+	$('script[type="script/x-lua"]').each(function(i, e) {
+		select.append('<option value="' + e.id + '"">' + e.title + '</option>')
+	})
+	select.bind('change', function(e) {
+		location.hash = $(this).val()
+	})
+	$(window).on('hashchange', function(e) {
+		select.val(location.hash.substr(1))
+		editor.setValue($(location.hash).text(), -1)
+		execute()
+	})
+
+	if (!location.hash.substr(1))
+		location.hash = select.val()
+	else
+		$(window).trigger('hashchange')
 
 </script>
 </body>
