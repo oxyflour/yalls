@@ -124,9 +124,9 @@
 		return Array.isArray(a) && a[0] === '.' ? ['.', a[1], a[2], f] : ['set', a, f];
 	}], ['stmt', ['varlist', '=', 'explist'], function (li, _eq, le) {
 		var set = ['set'];
-		// transform [set [. obj key] val] -> [set obj [. obj key val]]
+		// transform [set [. obj key] val] -> [set # [. obj key val]]
 		li.forEach(function (a, i) {
-			Array.isArray(a) && a[0] === '.' ? set.push(a[1], ['.', a[1], a[2], le[i]]) : set.push(a, le[i]);
+			Array.isArray(a) && a[0] === '.' ? set.push('...', ['.', a[1], a[2], le[i]]) : set.push(a, le[i]);
 		});
 		return set;
 	}], ['exp', ['sprimary']],
@@ -158,10 +158,9 @@
 		return ['if'].concat(c);
 	}], ['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'], function (_for, i, _eq, t, _do, b, _end) {
 		return ['for', t, ['lambda'].concat(i).concat([b])];
-	}],
-	//	['primary', ['while', 'exp', 'do', 'block', 'end'],
-	//		(_while, e, _do, b, _end) => ['while', e, b]],
-	['primary', ['primary', 'args'], function (f, a) {
+	}], ['primary', ['while', 'exp', 'do', 'block', 'end'], function (_while, e, _do, b, _end) {
+		return ['while', e, b];
+	}], ['primary', ['primary', 'args'], function (f, a) {
 		return f[0] === '.' ? [':', f[1], f[2]].concat(a) : [f].concat(a);
 	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_func, p, b, _end) {
 		return ['lambda'].concat(p).concat([b]);

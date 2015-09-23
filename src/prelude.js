@@ -2,26 +2,27 @@
 
 var self = {
 
-	'.': function(member) {
-		var object = this
-		while (object && object[member] === undefined)
-			object = object.prototype
-		return (object || self)[member]
+	'new': function f(obj) {
+		obj = obj || { }
+		for (var k in f.arga)
+			obj[k] = f.arga[k]
+
+		obj['..'] = this
+		obj['@'] = obj['@'] || this['@'] || self['@']
+
+		return obj
 	},
 
-	extend: function e() {
-		var object = { },
-			protos = Array.prototype.slice.call(arguments)
-				.concat(self.extend.arga)
-		protos.forEach(proto => {
-			if (proto) for (var k in proto)
-				if (proto.hasOwnProperty(k))
-					object[k] = proto[k]
-		})
-		object.prototype = this
-		if (object['.'] === undefined)
-			object['.'] = this['.'] || self['.']
-		return object
+	'@': function(prop, value) {
+		if (arguments.length > 1)
+			return this[prop] = value
+
+		var obj = this
+		while (obj && !(prop in obj))
+			obj = obj['..']
+
+		// may throw 'prop not found'
+		return obj && obj[prop]
 	},
 
 }
@@ -44,10 +45,10 @@ var root = {
 
 	'>': (a, b) => a > b,
 	'<': (a, b) => a < b,
-	'=': (a, b) => a == b,
 	'>=': (a, b) => a >= b,
 	'<=': (a, b) => a <= b,
 	'==': (a, b) => a === b,
+	'~=': (a, b) => a !== b,
 
 	'begin': function() {
 		return arguments[arguments.length - 1]
@@ -96,11 +97,11 @@ var root = {
 		}
 	},
 
-	'array': function array() {
+	'array': function() {
 		return Array.prototype.slice.call(arguments)
 	},
 
-	'dict': function dict() {
+	'dict': function() {
 		var data = { }
 		for (var i = 0; i < arguments.length - 1; i += 2)
 			data[arguments[i]] = arguments[i + 1]
@@ -109,15 +110,19 @@ var root = {
 
 	'self': self,
 
-	'.': function(o, k, v) {
-		var lookup = o && o['.'] || self['.']
-		return arguments.length > 2 ? (o[k] = v, o) : lookup.call(o, k)
+	'.': function f(obj) {
+		var fn = obj['@'] || self['@'],
+			args = Array.prototype.slice.call(arguments).slice(1)
+		return fn.apply2(obj, args, f.arga)
 	},
 
-	':': function c(o, k) {
-		var lookup = o && o['.'] || self['.'], fn = lookup.call(o, k)
-		if (!fn) throw 'Prelude: method "' + k + '" does not exist on object ' + o
-		return fn.apply2(o, Array.prototype.slice.call(arguments).slice(2), c.arga, c.kont)
+	':': function f(obj, method) {
+		var fn = root['.'](obj, method)
+		if (!fn)
+			throw 'YallsRuntime: method "' + method + '" does not exist on object ' + obj
+
+		var args = Array.prototype.slice.call(arguments).slice(2)
+		return fn.apply2(obj, args, f.arga)
 	},
 
 }

@@ -2,17 +2,17 @@
 <html>
 <head>
 <style>
-  a {
-  	text-decoration: none;
-  }
-  a:hover {
-  	text-decoration: underline;
-  }
-  .node {
-  	font-size: 80%;
-  	display: none;
-  	margin-left: 1em;
-  }
+a {
+	text-decoration: none;
+}
+a:hover {
+	text-decoration: underline;
+}
+.node {
+	font-size: 80%;
+	display: none;
+	margin-left: 1em;
+}
 </style>
 </head>
 <body>
@@ -21,18 +21,83 @@
 <small id="time"></small>
 <div id="input" style="width:100%;height:360px" rows="10">
 </div>
-<script id="blank" title="Blank" type="script/x-lua">
+<script title="yield with call/cc" type="script/x-lua">
+mkYield = fn(ret)
+	g = { ret }
+	next = fn(cc, value)
+		fn()
+			callcc(fn(ret)
+				g.ret = ret
+				cc(value)
+			end)
+		end
+	end
+	fn(value)
+		callcc(fn(cc)
+			g.ret({ next = next(cc, value), value })
+		end)
+	end
+end
+
+mkGenerator = fn(iter)
+	g = { }
+	g.next = fn()
+		callcc(fn(cc)
+			yield = mkYield(cc)
+			iter(yield)
+		end)
+	end
+	fn()
+		n = g.next()
+		g.next = n.next
+		n.value
+	end
+end
+
+iter = mkGenerator(fn(yield)
+    yield(1)
+    if yield(2) then
+    	yield(3)
+    else
+    	yield(4)
+    end
+    yield(5)
+end)
+
+echo(iter())
+echo(iter())
+echo(iter())
+echo(iter())
 
 </script>
-<script id="object_meta_method" title="Object Meta Method" type="script/x-lua">
-lookup = self['.']
+<script title="loop with call/cc" type="script/x-lua">
+do
+	g = { count = 0 }
 
-a = self.extend(
+	if not g.cc then
+		callcc(fn(cc)
+			g.cc = cc
+		end)
+	end
+
+	echo("go x{{ g.count }}")
+
+	if g.count < 10 then
+		g.count = g.count + 1
+		g.cc()
+	end
+
+end
+</script>
+<script title="object meta method" type="script/x-lua">
+lookup = self['@']
+
+a = self.new(
         name = 'a'
 		say = fn()
 		    echo('my name is ' + self.name)
 		end
-		'.' = fn(name)
+		'@' = fn(name)
 		    lookup.call(self, name) or fn()
 		        echo("[!] this guy ({{ self.name }}) " +
 		        	"cannot {{ name }} ")
@@ -40,22 +105,20 @@ a = self.extend(
 		end)
 a.say()
 
-b = a.extend(name = 'b')
+b = a.new(name = 'b')
 b.say()
 
 b.cry()
 </script>
-<script id="html_dsl" title="HTML DSL" type="script/x-lua">
+<script title="HTML DSL" type="script/x-lua">
 htmlBuilder = fn(env)
-	fns = {
-		css = fn()
-			(for v, k = pair(arga) do
-				"{{ k }}:{{ v }}"
-			end).join(';')
-		end
-	}
-	env.get = fn(name)
-		fns[name] or prelude.get(name) or fn()
+	css = fn()
+		(for v, k = pair(arga) do
+			"{{ k }}:{{ v }}"
+		end).join(';')
+	end
+	env['@'] = fn(name)
+		local[name] or fn()
 			attrs = for v, k = pair(arga) do "{{ k }}=\"{{ v }}\"" end
 			tag = attrs.length and name + ' ' + attrs.join(' ') or name
 			if args.length then
@@ -83,6 +146,7 @@ $('#result').append(text)
 
 </script>
 <div id="tree"></div>
+<pre id="console"></pre>
 <pre id="result"> loading... </pre>
 
 <script src="//libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
@@ -91,76 +155,80 @@ $('#result').append(text)
 <script src="//cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/mode-lua.js"></script>
 <script src="../yajily/build/lexer.js"></script>
 <script src="../yajily/build/parser.js"></script>
-<script src="build/interpreter.js"></script>
+<script src="build/cekcore.js"></script>
 <script src="build/grammar.js"></script>
 <script src="build/prelude.js"></script>
 <script>
 
-function format(tree, depth) {
-	depth = depth || 0
-	if (typeof(tree) !== typeof({ })) {
-		return tree
+	function format(tree, depth) {
+		depth = depth || 0
+		if (typeof(tree) !== typeof({ })) {
+			return tree
+		}
+		else if (depth < 50) {
+			var children = [ ]
+			for (var key in tree)
+				if (tree.hasOwnProperty(key))
+					children.push('<div class="item">' + 
+						key + ': ' + format(tree[key], depth + 1) + '</div>')
+			return '<a href onclick="$(this).next().toggle();return false">&gt;</a>' + 
+				'<div class="node">' +
+					children.join('') + '</div>'
+		}
 	}
-	else if (depth < 50) {
-		var children = [ ]
-		for (var key in tree)
-			if (tree.hasOwnProperty(key))
-				children.push('<div class="item">' + 
-					key + ': ' + format(tree[key], depth + 1) + '</div>')
-		return '<a href onclick="$(this).next().toggle();return false">&gt;</a>' + 
-			'<div class="node">' +
-				children.join('') + '</div>'
+
+	function compile(tree) {
+		if (Array.isArray(tree))
+			return tree.map(compile)
+		else if (tree === null)
+			return undefined
+		else if (tree.type === 'STR')
+			return '"' + tree.value
+		else if (tree.value !== undefined)
+			return tree.value
+		else
+			return tree
 	}
-}
 
-function compile(tree) {
-	if (Array.isArray(tree))
-		return tree.map(compile)
-	else if (tree === null)
-		return undefined
-	else if (tree.type === 'STR')
-		return '"' + tree.value
-	else if (tree.value !== undefined)
-		return tree.value
-	else
-		return tree
-}
+	function execute() {
+		if (!table) return
+		$('#result').empty()
+		$('#console').empty()
+		$('#tree').empty()
+		try {
+			var input = editor.getValue(),
+				tree = grammar.parse(input, table),
+				code = compile(tree)
+			$('#tree').html(format(code))
 
-function execute() {
-	if (!table) return
-	$('#result').empty()
-	$('#tree').empty()
-	try {
-		var input = editor.getValue(),
-			tree = grammar.parse(input, table),
-			code = compile(tree)
-		$('#tree').html(format(code))
-
-		var tickStart = Date.now()
-		evaluate(code, env)
-		$('#time').text((Date.now() - tickStart) + 'ms')
+			var tickStart = Date.now()
+			evaluate(code, env)
+			$('#time').text((Date.now() - tickStart) + 'ms')
+		}
+		catch (e) {
+			console.log(e)
+			$('#result').text('EvaluateError: ' + e)
+		}
 	}
-	catch (e) {
-		$('#result').text(e)
-	}
-}
 
-var env = evaluate.environment(null, prelude)
-env.update('echo', function() {
-	$('<pre></pre>')
-		.text(Array.prototype.slice.call(arguments).join(' '))
-		.appendTo('#result')
-})
-env.update('prelude', env.clone())
-env.update('console', console)
-env.update('$', $)
+	var prelude = evaluate.environment(null, prelude),
+		// make sure that prelude will not be modified accidently
+		env = evaluate.environment(prelude)
+	env('echo', function() {
+		$('<pre></pre>')
+			.text(Array.prototype.slice.call(arguments).join(' '))
+			.appendTo('#console')
+	})
+	env('console', console)
+	env('$', $)
+	env('log', console.log.bind(console))
 
-// compiled table, will be loaded later
-var table
-$.get('build/table.json', function(t) {
-	table = t
-	execute()
-})
+	// compiled table, will be loaded later
+	var table
+	$.get('build/table.json', function(t) {
+		table = t
+		execute()
+	})
 
 </script>
 <script>
@@ -172,12 +240,16 @@ $.get('build/table.json', function(t) {
 <script>
 
 	var select = $('#code_samples')
+
 	$('script[type="script/x-lua"]').each(function(i, e) {
+		if (!e.id) e.id = 'script' + i
 		select.append('<option value="' + e.id + '"">' + e.title + '</option>')
 	})
+
 	select.bind('change', function(e) {
 		location.hash = $(this).val()
 	})
+
 	$(window).on('hashchange', function(e) {
 		select.val(location.hash.substr(1))
 		editor.setValue($(location.hash).text(), -1)

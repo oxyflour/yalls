@@ -4,101 +4,45 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 (function () {
 
-    var callKont = [];
-
-    Function.prototype.apply2 = function (self, args, arga, kont) {
-        if (!this.extraArgs) this.extraArgs = [];
-
-        this.extraArgs.push(this.arga);
-        this.arga = arga;
-        this.extraArgs.push(this.kont);
-        this.kont = kont;
-
-        callKont.push(callKont.current);
-        callKont.current = kont;
-
-        try {
-            var ret = this.apply(self, args);
-        } catch (e) {
-            // just to keep the stack balanced
-            this.kont = this.extraArgs.pop();
-            this.arga = this.extraArgs.pop();
-            callKont.current = callKont.pop();
-            throw e;
-        }
-
-        this.kont = this.extraArgs.pop();
-        this.arga = this.extraArgs.pop();
-        callKont.current = callKont.pop();
-
-        return ret;
-    };
-
     /*
      * CEK machine implement
      */
 
     function environment(parent, local) {
-        var env = {
-            get: function get(name) {
-                return !parent || name in local ? local[name] : parent.get(name);
-            },
-            set: function set(name, value) {
-                return local[name] = value;
-            },
-            'set!': function set(name, value) {
-                return !parent || name in local ? local[name] = value : parent['set!'](name, value);
-            }
-        };
         local = local || {};
-        env.set('local', env);
-        return env;
+        local.local = local;
+        return function (name, value, setParent) {
+            if (arguments.length > 1) return !(name in local) && parent && setParent ? parent.apply(null, arguments) : local[name] = value;else return !(name in local) && parent ? parent(name) : local[name];
+        };
     }
 
     function value(exp, env) {
-        if (typeof exp === 'string') return exp.substr(0, 1) === '"' ? exp.substr(1) : env.get(exp);else return exp;
+        if (typeof exp === 'string') return exp.substr(0, 1) === '"' ? exp.substr(1) : env(exp);else return exp;
     }
 
-    function closure(lambda, parent) {
-        return function clo() {
-            var env = environment(parent);
+    function applyProc(proc, args, env, kont) {
+        if (typeof proc === 'function') {
+            return applyKont(kont, proc.apply(null, args));
+        } else if (proc && proc[0] === 'closure') {
+            var _proc = _slicedToArray(proc, 3);
 
-            env.set('self', this);
+            var _ = _proc[0];
+            var lambda = _proc[1];
+            var env = _proc[2];
 
-            env.set('args', Array.prototype.slice.call(arguments));
-            for (var i = 1; i < lambda.length - 1; i++) env.set(lambda[i], arguments[i - 1]);
-
-            env.set('arga', clo.arga || {});
-            if (clo.arga) for (var k in clo.arga) env.set(k, clo.arga[k]);
-
-            var kont = clo.kont || callKont.current;
-            if (!kont) throw 'RuntimeError: continuation is missing';
-
-            return run(lambda[lambda.length - 1], env, kont);
-        };
-    }
-
-    function continuation(kont) {
-        return function (value) {
-            // throw new state out
-            throw { stateAfterApply: applyKont(kont, value), appliedKont: kont };
-        };
-    }
-
-    function apply(self, proc, paras, kont) {
-        if (!proc) throw 'RuntimeError: ' + proc + ' is not a function';
-
-        var args = [],
-            arga = {};
-        paras.forEach(function (e) {
-            if (Array.isArray(e) && e[0] === 'name=arg') arga[e[1]] = e[2];else args.push(e);
-        });
-
-        return proc.apply2(self, args, arga, kont);
+            env = environment(env);
+            for (var i = 1; i < lambda.length - 1; i++) env(lambda[i], args[i - 1]);
+            return [lambda[lambda.length - 1], env, kont];
+        } else if (proc && proc[0] === 'continuation') {
+            return applyKont(proc[1], args[0]);
+        } else {
+            console.log(proc);
+            throw 'YallsRuntime: ' + proc + ' is not a function!';
+        }
     }
 
     function applyKont(kont, value) {
-        if (kont) {
+        if (Array.isArray(kont)) {
             var _kont = _slicedToArray(kont, 4);
 
             var name = _kont[0];
@@ -107,10 +51,12 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
             var lastKont = _kont[3];
 
             env = environment(env);
-            env.set(name, value);
+            env(name, value);
             return [exp, env, lastKont];
-        } else {
+        } else if (!kont) {
             return [value];
+        } else {
+            throw 'YallsRuntime: ' + proc + ' is not a continuation!';
         }
     }
 
@@ -121,7 +67,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
         var head = exp[0];
         if (head === 'lambda') {
-            return [closure(exp, env), env, kont];
+            return [['closure', exp, env], env, kont];
         }
         // if a e1 e2
         else if (head === 'if') {
@@ -134,24 +80,36 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
                 // set v1 a1 v2 a2 ...
                 else if (head === 'set' || head === 'set!') {
                         for (var i = 1, pair = []; i < exp.length; i += 2) pair.push(exp[i], value(exp[i + 1], env));
-                        for (var i = 0, last = undefined; i < pair.length; i += 2) last = env[head](pair[i], pair[i + 1]);
+                        for (var i = 0, last = undefined; i < pair.length; i += 2) last = env(pair[i], pair[i + 1], head === 'set!');
                         return applyKont(kont, last);
                     }
-                    // call/cc a
-                    else if (head === 'callcc') {
-                            return applyKont(kont, apply(env.get('self'), value(exp[1], env), [continuation(kont)], kont));
+                    // get property
+                    else if (head === '.') {
+                            var dict = value(exp[1], env),
+                                key = value(exp[2], env);
+                            if (exp.length > 3) dict[key] = value(exp[3], env);
+                            return applyKont(kont, dict[key]);
                         }
-                        // name=arg name arg
-                        else if (head === 'name=arg') {
-                                return applyKont(kont, ['name=arg', value(exp[1], env), value(exp[2], env)]);
+                        // call method
+                        else if (head === ':') {
+                                var dict = value(exp[1], env),
+                                    key = value(exp[2], env),
+                                    args = exp.slice(3).map(function (a) {
+                                    return value(a, env);
+                                });
+                                return applyProc(dict[key], args, env, kont);
                             }
-                            // fn a a
-                            else {
-                                    var args = exp.slice(1).map(function (a) {
-                                        return value(a, env);
-                                    });
-                                    return applyKont(kont, apply(env.get('self'), value(exp[0], env), args, kont));
+                            // call/cc a
+                            else if (head === 'callcc') {
+                                    return applyProc(value(exp[1], env), [['continuation', kont]], env, kont);
                                 }
+                                // fn a a
+                                else {
+                                        var args = exp.slice(1).map(function (a) {
+                                            return value(a, env);
+                                        });
+                                        return applyProc(value(exp[0], env), args, env, kont);
+                                    }
     }
 
     // http://matt.might.net/articles/a-normalization/
@@ -226,24 +184,15 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
     }
 
     function run(exp, env, kont) {
-        if (!exp.isStatement) {
-            exp = anf(exp);
-            exp = stmt(exp);
-        }
+        exp = anf(exp);
+        exp = stmt(exp);
 
         var state = [exp, env, kont];
-        while (state[0] && state[0].isStatement || state[2]) {
-            try {
-                state = step.apply(undefined, state);
-            } catch (e) {
-                if (e.appliedKont === kont) state = e.stateAfterApply;else throw e;
-            }
-        }
+        while (state[0] && state[0].isStatement || state[2]) state = step.apply(null, state);
         return state[0];
     }
 
     run.environment = environment;
-    run.anf = anf;
 
     if (typeof module !== 'undefined') module.exports = run;else if (typeof window !== 'undefined') window.evaluate = run;
 })();

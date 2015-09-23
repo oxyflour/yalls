@@ -1,119 +1,60 @@
 (function() {
 
-var callKont = [ ]
-
-Function.prototype.apply2 = function(self, args, arga, kont) {
-    if (!this.extraArgs) this.extraArgs = [ ]
-        
-    this.extraArgs.push(this.arga)
-    this.arga = arga
-    this.extraArgs.push(this.kont)
-    this.kont = kont
-
-    callKont.push(callKont.current)
-    callKont.current = kont
-
-    try {
-        var ret = this.apply(self, args)
-    }
-    catch (e) {
-        // just to keep the stack balanced
-        this.kont = this.extraArgs.pop()
-        this.arga = this.extraArgs.pop()
-        callKont.current = callKont.pop()
-        throw e
-    }
-
-    this.kont = this.extraArgs.pop()
-    this.arga = this.extraArgs.pop()
-    callKont.current = callKont.pop()
-
-    return ret
-}
-
 /*
  * CEK machine implement
  */
 
 function environment(parent, local) {
-    var env = {
-        get: function(name) {
-            return !parent || name in local ?
-                local[name] : parent.get(name)
-        },
-        set: function(name, value) {
-            return local[name] = value
-        },
-        'set!': function(name, value) {
-            return !parent || name in local ?
-                (local[name] = value) : parent['set!'](name, value)
-        },
-    }
     local = local || { }
-    env.set('local', env)
-    return env
+    local.local = local
+    return function(name, value, setParent) {
+        if (arguments.length > 1)
+            return !(name in local) && parent && setParent ?
+                parent.apply(null, arguments) : (local[name] = value)
+        else
+            return !(name in local) && parent ? parent(name) : local[name]
+    }
 }
 
 function value(exp, env) {
     if (typeof(exp) === 'string')
-        return exp.substr(0, 1) === '"' ? exp.substr(1) : env.get(exp)
+        return exp.substr(0, 1) === '"' ? exp.substr(1) : env(exp)
     else
         return exp
 }
 
-function closure(lambda, parent) {
-    return function clo() {
-        var env = environment(parent)
-
-        env.set('self', this)
-
-        env.set('args', Array.prototype.slice.call(arguments))
+function applyProc(proc, args, env, kont) {
+    if (typeof(proc) === 'function') {
+        return applyKont(kont, proc.apply(null, args))
+    }
+    else if (proc && proc[0] === 'closure') {
+        var [_, lambda, env] = proc
+        env = environment(env)
         for (var i = 1; i < lambda.length - 1; i ++)
-            env.set(lambda[i], arguments[i - 1])
-
-        env.set('arga', clo.arga || { })
-        if (clo.arga) for (var k in clo.arga)
-            env.set(k, clo.arga[k])
-
-        var kont = clo.kont || callKont.current
-        if (!kont)
-            throw 'RuntimeError: continuation is missing'
-
-        return run(lambda[lambda.length - 1], env, kont)
+            env(lambda[i], args[i - 1])
+        return [lambda[lambda.length - 1], env, kont]
     }
-}
-
-function continuation(kont) {
-    return function(value) {
-        // throw new state out
-        throw { stateAfterApply:applyKont(kont, value), appliedKont:kont }
+    else if (proc && proc[0] === 'continuation') {
+        return applyKont(proc[1], args[0])
     }
-}
-
-function apply(self, proc, paras, kont) {
-    if (!proc)
-        throw 'RuntimeError: ' + proc + ' is not a function'
-
-    var args = [ ], arga = { }
-    paras.forEach(e => {
-        if (Array.isArray(e) && e[0] === 'name=arg')
-            arga[ e[1] ] = e[2]
-        else
-            args.push(e)
-    })
-
-    return proc.apply2(self, args, arga, kont)
+    else {
+        console.log(proc)
+        throw 'YallsRuntime: ' + proc + ' is not a function!'
+    }
 }
 
 function applyKont(kont, value) {
-    if (kont) {
+    if (Array.isArray(kont)) {
         var [name, exp, env, lastKont] = kont
         env = environment(env)
-        env.set(name, value)
+        env(name, value)
         return [exp, env, lastKont]
     }
-    else {
+    else if (!kont) {
         return [value]
+    }
+    else {
+        throw 'YallsRuntime: ' + proc + ' is not a continuation!'
     }
 }
 
@@ -124,7 +65,7 @@ function step(exp, env, kont) {
 
     var head = exp[0]
     if (head === 'lambda') {
-        return [closure(exp, env), env, kont]
+        return [['closure', exp, env], env, kont]
     }
     // if a e1 e2
     else if (head === 'if') {
@@ -139,21 +80,32 @@ function step(exp, env, kont) {
         for (var i = 1, pair = [ ]; i < exp.length; i += 2)
             pair.push(exp[i], value(exp[i + 1], env))
         for (var i = 0, last = undefined; i < pair.length; i += 2)
-            last = env[head](pair[i], pair[i + 1])
+            last = env(pair[i], pair[i + 1], head === 'set!')
         return applyKont(kont, last)
+    }
+    // get property
+    else if (head === '.') {
+        var dict = value(exp[1], env),
+            key = value(exp[2], env)
+        if (exp.length > 3)
+            dict[key] = value(exp[3], env)
+        return applyKont(kont, dict[key])
+    }
+    // call method
+    else if (head === ':') {
+        var dict = value(exp[1], env),
+            key = value(exp[2], env),
+            args = exp.slice(3).map(a => value(a, env))
+        return applyProc(dict[key], args, env, kont)
     }
     // call/cc a
     else if (head === 'callcc') {
-        return applyKont(kont, apply(env.get('self'), value(exp[1], env), [continuation(kont)], kont))
-    }
-    // name=arg name arg
-    else if (head === 'name=arg') {
-        return applyKont(kont, ['name=arg', value(exp[1], env), value(exp[2], env)])
+        return applyProc(value(exp[1], env), [['continuation', kont]], env, kont)
     }
     // fn a a
     else {
         var args = exp.slice(1).map(a => value(a, env))
-        return applyKont(kont, apply(env.get('self'), value(exp[0], env), args, kont))
+        return applyProc(value(exp[0], env), args, env, kont)
     }
 }
 
@@ -175,8 +127,8 @@ function anf(exp) {
     }
     else if (head === 'if') {
         // [if c1 e1 c2 e2 ...] -> [if c1 e1 [if c2 e2]]
-		if (exp.length > 4)
-			exp = ['if', exp[1], exp[2], ['if'].concat(exp.slice(3))]
+        if (exp.length > 4)
+            exp = ['if', exp[1], exp[2], ['if'].concat(exp.slice(3))]
         // [if [...] exp1 exp2] -> [let $ [...] [if $ exp1 exp2]]
         if (Array.isArray(exp[1]))
             exp[1] = wrap(exp[1])
@@ -200,8 +152,8 @@ function anf(exp) {
         if (exp.length < 4)
             exp = ['let', undefined, undefined, exp[exp.length - 1]]
         // [let v1 e1 v2 e2 body] -> [let v1 e1 [let v2 e2 body]]
-		else if (exp.length > 4)
-			exp = ['let', exp[1], exp[2], ['let'].concat(exp.slice(3))]
+        else if (exp.length > 4)
+            exp = ['let', exp[1], exp[2], ['let'].concat(exp.slice(3))]
     }
     else if (head === 'set' || head === 'set!') {
         // [set v1 [...] v2 [...]] ->
@@ -242,28 +194,16 @@ function stmt(exp) {
 }
 
 function run(exp, env, kont) {
-    if (!exp.isStatement) {
-        exp = anf(exp)
-        exp = stmt(exp)
-    }
+    exp = anf(exp)
+    exp = stmt(exp)
 
     var state = [exp, env, kont]
-    while (state[0] && state[0].isStatement || state[2]) {
-        try {
-            state = step.apply(undefined, state)
-        }
-        catch (e) {
-            if (e.appliedKont === kont)
-                state = e.stateAfterApply
-            else
-                throw e
-        }
-    }
+    while (state[0] && state[0].isStatement || state[2])
+        state = step.apply(null, state)
     return state[0]
 }
 
 run.environment = environment
-run.anf = anf
 
 if (typeof(module) !== 'undefined')
 	module.exports = run
