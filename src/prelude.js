@@ -18,7 +18,7 @@ var self = {
 			return this[prop] = value
 
 		var obj = this
-		while (obj && !(prop in obj))
+		while (obj && obj[prop] === undefined)
 			obj = obj['..']
 
 		// may throw 'prop not found'
@@ -116,11 +116,9 @@ var root = {
 		return fn.apply2(obj, args, f.arga)
 	},
 
-	':': function f(obj, method) {
-		var fn = root['.'](obj, method)
+	':': function f(obj, fn) {
 		if (!fn)
 			throw 'YallsRuntime: method "' + method + '" does not exist on object ' + obj
-
 		var args = Array.prototype.slice.call(arguments).slice(2)
 		return fn.apply2(obj, args, f.arga)
 	},

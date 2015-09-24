@@ -120,7 +120,7 @@ var stmts = {
 			pair.push(exp[i], evaluate(exp[i + 1], env))
 		var last = undefined
 		for (var i = 0; i < pair.length - 1; i += 2)
-			env(pair[i], last = pair[i + 1])
+			env(pair[i], last = pair[i + 1], true)
 		return last
 	},
 

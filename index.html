@@ -22,69 +22,73 @@ a:hover {
 <div id="input" style="width:100%;height:360px" rows="10">
 </div>
 <script title="yield with call/cc" type="script/x-lua">
-mkYield = fn(ret)
-	g = { ret }
+mkYield = fn(ret, next)
 	next = fn(cc, value)
 		fn()
-			callcc(fn(ret)
-				g.ret = ret
+			callcc(fn(rcc)
+				ret = rcc
 				cc(value)
 			end)
 		end
 	end
 	fn(value)
 		callcc(fn(cc)
-			g.ret({ next = next(cc, value), value })
+			ret({ next = next(cc, value), value })
 		end)
 	end
 end
 
-mkGenerator = fn(iter)
-	g = { }
-	g.next = fn()
+mkGenerator = fn(iter, next)
+	next = fn()
 		callcc(fn(cc)
 			yield = mkYield(cc)
 			iter(yield)
 		end)
 	end
 	fn()
-		n = g.next()
-		g.next = n.next
+		n = next()
+		next = n.next
 		n.value
 	end
 end
 
 iter = mkGenerator(fn(yield)
     yield(1)
+
+    echo('yielding in if')
+
     if yield(2) then
     	yield(3)
     else
     	yield(4)
     end
+
+    echo('yielding in function')
+
     yield(5)
+
 end)
 
 echo(iter())
-echo(iter())
-echo(iter())
-echo(iter())
+
+console.yieldNext = iter
 
 </script>
 <script title="loop with call/cc" type="script/x-lua">
-do
-	g = { count = 0 }
+let count = 0
+	kont = nil do
 
-	if not g.cc then
+	if not kont then
 		callcc(fn(cc)
-			g.cc = cc
+			kont = cc
 		end)
 	end
 
-	echo("go x{{ g.count }}")
+	echo("go x{{ count }}")
 
-	if g.count < 10 then
-		g.count = g.count + 1
-		g.cc()
+	if count < 10 then
+		count = count + 1
+		kont()
 	end
 
 end
@@ -110,7 +114,7 @@ b.say()
 
 b.cry()
 </script>
-<script title="HTML DSL" type="script/x-lua">
+<script title="dsl (html)" type="script/x-lua">
 htmlBuilder = fn(env)
 	css = fn()
 		(for v, k = pair(arga) do
@@ -155,7 +159,7 @@ $('#result').append(text)
 <script src="//cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/mode-lua.js"></script>
 <script src="../yajily/build/lexer.js"></script>
 <script src="../yajily/build/parser.js"></script>
-<script src="build/cekcore.js"></script>
+<script src="build/cekvm.js"></script>
 <script src="build/grammar.js"></script>
 <script src="build/prelude.js"></script>
 <script>
@@ -202,7 +206,7 @@ $('#result').append(text)
 			$('#tree').html(format(code))
 
 			var tickStart = Date.now()
-			evaluate(code, env)
+			evaluate(code, evaluate.environment(env))
 			$('#time').text((Date.now() - tickStart) + 'ms')
 		}
 		catch (e) {
@@ -211,9 +215,7 @@ $('#result').append(text)
 		}
 	}
 
-	var prelude = evaluate.environment(null, prelude),
-		// make sure that prelude will not be modified accidently
-		env = evaluate.environment(prelude)
+	var env = evaluate.environment(null, prelude)
 	env('echo', function() {
 		$('<pre></pre>')
 			.text(Array.prototype.slice.call(arguments).join(' '))
@@ -235,6 +237,7 @@ $('#result').append(text)
 
 	var editor = ace.edit('input')
 	editor.getSession().setMode('ace/mode/lua')
+	editor.$blockScrolling = Infinity
 
 </script>
 <script>

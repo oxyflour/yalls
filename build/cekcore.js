@@ -20,7 +20,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         if (typeof exp === 'string') return exp.substr(0, 1) === '"' ? exp.substr(1) : env(exp);else return exp;
     }
 
-    function applyProc(proc, args, env, kont) {
+    function applyProc(proc, args, kont) {
         if (typeof proc === 'function') {
             return applyKont(kont, proc.apply(null, args));
         } else if (proc && proc[0] === 'closure') {
@@ -97,18 +97,18 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
                                     args = exp.slice(3).map(function (a) {
                                     return value(a, env);
                                 });
-                                return applyProc(dict[key], args, env, kont);
+                                return applyProc(dict[key], args, kont);
                             }
                             // call/cc a
                             else if (head === 'callcc') {
-                                    return applyProc(value(exp[1], env), [['continuation', kont]], env, kont);
+                                    return applyProc(value(exp[1], env), [['continuation', kont]], kont);
                                 }
                                 // fn a a
                                 else {
                                         var args = exp.slice(1).map(function (a) {
                                             return value(a, env);
                                         });
-                                        return applyProc(value(exp[0], env), args, env, kont);
+                                        return applyProc(value(exp[0], env), args, kont);
                                     }
     }
 

@@ -20,7 +20,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			if (arguments.length > 1) return this[prop] = value;
 
 			var obj = this;
-			while (obj && !(prop in obj)) obj = obj['..'];
+			while (obj && obj[prop] === undefined) obj = obj['..'];
 
 			// may throw 'prop not found'
 			return obj && obj[prop];
@@ -150,10 +150,8 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			return fn.apply2(obj, args, f.arga);
 		},
 
-		':': function f(obj, method) {
-			var fn = root['.'](obj, method);
+		':': function f(obj, fn) {
 			if (!fn) throw 'YallsRuntime: method "' + method + '" does not exist on object ' + obj;
-
 			var args = Array.prototype.slice.call(arguments).slice(2);
 			return fn.apply2(obj, args, f.arga);
 		}

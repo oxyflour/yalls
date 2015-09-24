@@ -109,7 +109,7 @@ var actions = [
 	[/and|or/,
 		m => token('AND', m)],
 
-	[/if|elseif|then|else|fn|while|for|do|end|nil|self|try|catch|throw/,
+	[/if|elseif|then|else|let|fn|while|for|do|end|nil|try|catch|throw/,
 		m => token(m, m)],
 
 	[/[a-zA-Z\$_]+\d*\w*/,
@@ -177,10 +177,10 @@ var grammars = [
 	}],
 
 	['exp', ['sprimary']],
-//	['exp', ['primary', 'explist'],
-//		(f, a) => (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a)],
 	['exp', ['NOT', 'exp'],
 		(o, e) => [o, e]],
+	['exp', ['exp', '|', 'exp'],
+		(e1, o, e2) => [e2, e1]],
 	['exp', ['exp', 'AND', 'exp'],
 		(e1, o, e2) => [o, e1, e2]],
 	['exp', ['exp', 'CMP', 'exp'],
@@ -207,6 +207,8 @@ var grammars = [
 		(p, _d, i) => ['.', p, token('STR', i.value)]],
 	['primary', ['do', 'block', 'end'],
 		(_do, b, _end) => ['let', b]],
+	['primary', ['let', 'fieldlist', 'do', 'block', 'end'],
+		(_let, l, _do, b, _end) => ['let'].concat(l.map((v, i) => i % 2 ? v : v.value)).concat([b])],
 	['primary', ['if', 'conds', 'end'],
 		(_if, c) => ['if'].concat(c)],
 	['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'],
@@ -214,7 +216,7 @@ var grammars = [
 	['primary', ['while', 'exp', 'do', 'block', 'end'],
 		(_while, e, _do, b, _end) => ['while', e, b]],
 	['primary', ['primary', 'args'],
-		(f, a) => f[0] === '.' ? [':', f[1], f[2]].concat(a) : [f].concat(a)],
+		(f, a) => f[0] === '.' ? [':', f[1], f].concat(a) : [f].concat(a)],
 	['primary', ['fn', 'pars', 'block', 'end'],
 		(_func, p, b, _end) => ['lambda'].concat(p).concat([b])],
 	['primary', ['{', '|', 'idlist', '|', 'block', '}'],
@@ -304,7 +306,6 @@ var grammars = [
 	['literal', ['NUM']],
 	['literal', ['STR']],
 	['literal', ['nil']],
-	['literal', ['self']],
 	['literal', ['tableconst']],
 	['literal', ['arrayconst']],
 
@@ -332,8 +333,6 @@ var grammars = [
 		(i) => [token('STR', i.value), i]],
 	['field', ['ID', '=', 'exp'],
 		(i, _eq, e) => [token('STR', i.value), e]],
-	['field', ['NUM', '=', 'exp'],
-		(i, _eq, e) => [token('STR', i.value), e]],
 	['field', ['STR', '=', 'exp'],
 		(i, _eq, e) => [i, e]],
 	['field', ['[', 'exp', ']', '=', 'exp'],
@@ -347,6 +346,7 @@ var precedence = {
 	ADD: [12, 'left'],
 	CMP: [11, 'left'],
 	AND: [10, 'left'],
+	'|': [10, 'left'],
 }
 
 var yajily = typeof(window) !== 'undefined' ? window.yajily : require('../../yajily')

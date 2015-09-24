@@ -87,7 +87,7 @@
 		return token('CMP', m);
 	}], [/and|or/, function (m) {
 		return token('AND', m);
-	}], [/if|elseif|then|else|fn|while|for|do|end|nil|self|try|catch|throw/, function (m) {
+	}], [/if|elseif|then|else|let|fn|while|for|do|end|nil|try|catch|throw/, function (m) {
 		return token(m, m);
 	}], [/[a-zA-Z\$_]+\d*\w*/, function (m) {
 		return token('ID', m);
@@ -129,11 +129,10 @@
 			Array.isArray(a) && a[0] === '.' ? set.push('...', ['.', a[1], a[2], le[i]]) : set.push(a, le[i]);
 		});
 		return set;
-	}], ['exp', ['sprimary']],
-	//	['exp', ['primary', 'explist'],
-	//		(f, a) => (f[0] === '.' ? [':', f[1], f[2]] : [f]).concat(a)],
-	['exp', ['NOT', 'exp'], function (o, e) {
+	}], ['exp', ['sprimary']], ['exp', ['NOT', 'exp'], function (o, e) {
 		return [o, e];
+	}], ['exp', ['exp', '|', 'exp'], function (e1, o, e2) {
+		return [e2, e1];
 	}], ['exp', ['exp', 'AND', 'exp'], function (e1, o, e2) {
 		return [o, e1, e2];
 	}], ['exp', ['exp', 'CMP', 'exp'], function (e1, o, e2) {
@@ -154,6 +153,10 @@
 		return ['.', p, token('STR', i.value)];
 	}], ['primary', ['do', 'block', 'end'], function (_do, b, _end) {
 		return ['let', b];
+	}], ['primary', ['let', 'fieldlist', 'do', 'block', 'end'], function (_let, l, _do, b, _end) {
+		return ['let'].concat(l.map(function (v, i) {
+			return i % 2 ? v : v.value;
+		})).concat([b]);
 	}], ['primary', ['if', 'conds', 'end'], function (_if, c) {
 		return ['if'].concat(c);
 	}], ['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'], function (_for, i, _eq, t, _do, b, _end) {
@@ -161,7 +164,7 @@
 	}], ['primary', ['while', 'exp', 'do', 'block', 'end'], function (_while, e, _do, b, _end) {
 		return ['while', e, b];
 	}], ['primary', ['primary', 'args'], function (f, a) {
-		return f[0] === '.' ? [':', f[1], f[2]].concat(a) : [f].concat(a);
+		return f[0] === '.' ? [':', f[1], f].concat(a) : [f].concat(a);
 	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_func, p, b, _end) {
 		return ['lambda'].concat(p).concat([b]);
 	}], ['primary', ['{', '|', 'idlist', '|', 'block', '}'], function (_l, _s, p, _d, b, _end) {
@@ -241,7 +244,7 @@
 	}],
 
 	// literal
-	['literal', ['NUM']], ['literal', ['STR']], ['literal', ['nil']], ['literal', ['self']], ['literal', ['tableconst']], ['literal', ['arrayconst']],
+	['literal', ['NUM']], ['literal', ['STR']], ['literal', ['nil']], ['literal', ['tableconst']], ['literal', ['arrayconst']],
 
 	// array constructor
 	['arrayconst', ['[', 'explist', ']'], function (_l, e, _r) {
@@ -263,8 +266,6 @@
 		return [token('STR', i.value), i];
 	}], ['field', ['ID', '=', 'exp'], function (i, _eq, e) {
 		return [token('STR', i.value), e];
-	}], ['field', ['NUM', '=', 'exp'], function (i, _eq, e) {
-		return [token('STR', i.value), e];
 	}], ['field', ['STR', '=', 'exp'], function (i, _eq, e) {
 		return [i, e];
 	}], ['field', ['[', 'exp', ']', '=', 'exp'], function (_l, e1, _r, _eq, e2) {
@@ -277,7 +278,8 @@
 		MUL: [13, 'left'],
 		ADD: [12, 'left'],
 		CMP: [11, 'left'],
-		AND: [10, 'left']
+		AND: [10, 'left'],
+		'|': [10, 'left']
 	};
 
 	var yajily = typeof window !== 'undefined' ? window.yajily : require('../../yajily');
