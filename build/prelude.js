@@ -75,10 +75,6 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			return a !== b;
 		},
 
-		'begin': function begin() {
-			return arguments[arguments.length - 1];
-		},
-
 		'for': function _for(iterator, func) {
 			var data = [],
 			    ret = [];
@@ -147,12 +143,6 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 		'.': function f(obj) {
 			var fn = obj['@'] || self['@'],
 			    args = Array.prototype.slice.call(arguments).slice(1);
-			return fn.apply2(obj, args, f.arga);
-		},
-
-		':': function f(obj, fn) {
-			if (!fn) throw 'YallsRuntime: method "' + method + '" does not exist on object ' + obj;
-			var args = Array.prototype.slice.call(arguments).slice(2);
 			return fn.apply2(obj, args, f.arga);
 		}
 

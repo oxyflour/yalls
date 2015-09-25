@@ -14,6 +14,10 @@ function token(type, value, string) {
 	return t
 }
 
+function symbol() {
+    return '#g' + (symbol.index = (symbol.index || 0) + 1)
+}
+
 function beginStringGen(tag) {
 	return function(m) {
 		this.push(tag);
@@ -132,6 +136,41 @@ var actions = [
 
 ]
 
+// [let c1 e1 c2 e2 ...] -> [let c1 e1 [let c2 e2]]
+function letExp(vars, body) {
+	if (vars.length < 2)
+		return ['let', undefined, undefined, body]
+	else if (vars.length == 2)
+		return ['let', vars[0], vars[1], body]
+	else
+		return ['let', vars[0], vars[1], letExp(vars.slice(2), body)]
+}
+
+// [if c1 e1 c2 e2 ...] -> [if c1 e1 [if c2 e2]]
+function ifExp(conds) {
+	if (conds.length < 3)
+		return ['if', conds[0], conds[1], conds[2]]
+	else
+    	return ['if', conds[0], conds[1], ifExp(conds.slice(2))]
+}
+
+// [and e1 e2] -> [let # e1 [if # e2 #]]
+function andExp(operator, exp1, exp2) {
+    var sym = symbol()
+    if (operator.value === 'and')
+	    return ['let', sym, exp1, ['if', sym, exp2, sym]]
+    else if (operator.value === 'or')
+	    return ['let', sym, exp1, ['if', sym, sym, exp2]]
+	else
+		return [operator, exp1, exp2]
+}
+
+// [: obj methodName arg ...] -> [let # obj [: # [. # methodName] arg ...]]
+function applyExp(object, methodName, args) {
+    var sym = symbol(), fn = ['.', sym, methodName]
+    return ['let', sym, object, ['apply-method', sym, fn].concat(args)]
+}
+
 var grammars = [
 
 	['S', ['block']],
@@ -159,7 +198,7 @@ var grammars = [
 
 	['stmt', ['exp']],
 //	['stmt', ['primary', 'explist'],
-//		(f, a) => f[0] === '.' ? [':', f[1], f].concat(a) : [f].concat(a)],
+//		(f, a) => f[0] === '.' ? desugarApplyMethod(['apply-method', f[1], f].concat(a) : [f].concat(a)]),
 	['stmt', ['throw', 'exp'],
 		(t, e) => [t, e]],
 	['stmt', ['fn', 'fnname', 'pars', 'block', 'end'], (_func, a, p, b, _end) => {
@@ -173,7 +212,7 @@ var grammars = [
 		// transform [set [. obj key] val] -> [set # [. obj key val]]
 		li.forEach((a, i) => {
 			Array.isArray(a) && a[0] === '.' ?
-				set.push('...', ['.', a[1], a[2], le[i]]) : set.push(a, le[i])
+				set.push('#tmp', ['.', a[1], a[2], le[i]]) : set.push(a, le[i])
 		})
 		return set
 	}],
@@ -184,7 +223,7 @@ var grammars = [
 	['exp', ['exp', '|', 'exp'],
 		(e1, o, e2) => [e2, e1]],
 	['exp', ['exp', 'AND', 'exp'],
-		(e1, o, e2) => [o, e1, e2]],
+		(e1, o, e2) => andExp(o, e1, e2)],
 	['exp', ['exp', 'CMP', 'exp'],
 		(e1, o, e2) => [o, e1, e2]],
 	['exp', ['exp', 'ADD', 'exp'],
@@ -208,17 +247,17 @@ var grammars = [
 	['primary', ['primary', '.', 'ID'],
 		(p, _d, i) => ['.', p, token('STR', i.value)]],
 	['primary', ['do', 'block', 'end'],
-		(_do, b, _end) => ['let', b]],
+		(_do, b, _end) => letExp([ ], b)],
 	['primary', ['let', 'fieldlist', 'do', 'block', 'end'],
-		(_let, l, _do, b, _end) => ['let'].concat(l.map((v, i) => i % 2 ? v : v.value)).concat([b])],
+		(_let, l, _do, b, _end) => letExp(l.map((v, i) => i % 2 ? v : v.value), b)],
 	['primary', ['if', 'conds', 'end'],
-		(_if, c) => ['if'].concat(c)],
+		(_if, c) => ifExp(c)],
 	['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'],
 		(_for, i, _eq, t, _do, b, _end) => ['for', t, ['lambda'].concat(i).concat([b])]],
 	['primary', ['while', 'exp', 'do', 'block', 'end'],
 		(_while, e, _do, b, _end) => ['while', e, b]],
 	['primary', ['primary', 'args'],
-		(f, a) => f[0] === '.' ? [':', f[1], f[2]].concat(a) : [f].concat(a)],
+		(f, a) => f[0] === '.' ? applyExp(f[1], f[2], a) : [f].concat(a)],
 	['primary', ['fn', 'pars', 'block', 'end'],
 		(_func, p, b, _end) => ['lambda'].concat(p).concat([b])],
 	['primary', ['{', '|', 'idlist', '|', 'block', '}'],
@@ -282,9 +321,9 @@ var grammars = [
 	['arg', ['exp'],
 		(e) => e],
 	['arg', ['ID', '=', 'exp'],
-		(i, _eq, e) => ['name=arg', token('STR', i.value), e]],
+		(i, _eq, e) => ['named-arg', token('STR', i.value), e]],
 	['arg', ['STR', '=', 'exp'],
-		(i, _eq, e) => ['name=arg', i, e]],
+		(i, _eq, e) => ['named-arg', i, e]],
 
 	// for iterator
 	['iterator', ['exp'],

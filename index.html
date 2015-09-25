@@ -188,7 +188,7 @@ $('#result').append(text)
 	function compile(tree) {
 		if (Array.isArray(tree))
 			return tree.map(compile)
-		else if (tree === null)
+		else if (tree === null || tree === undefined)
 			return undefined
 		else if (tree.type === 'STR')
 			return '"' + tree.value

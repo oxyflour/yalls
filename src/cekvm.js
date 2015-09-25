@@ -12,10 +12,6 @@ Function.prototype.apply2 = function(self, args, arga, kont) {
     return ret
 }
 
-function symbol() {
-    return '#g' + (symbol.index = (symbol.index || 0) + 1)
-}
-
 /*
  * CEK machine implement
  */
@@ -123,7 +119,7 @@ function step(exp, env, kont) {
     if (!(exp && exp.isStatement))
         return applyKont(kont, value(exp, env))
 
-    var func = stepStmts[ exp[0] ] || stepStmts.apply
+    var func = stepStmts[ exp[0] ] || stepStmts['apply-function']
     return func(exp, env, kont)
 }
 
@@ -148,21 +144,25 @@ var stepStmts = {
     'if': function(exp, env, kont) {
         return [value(exp[1], env) ? exp[2] : exp[3], env, kont]
     },
-    // name=arg name arg
-    'name=arg': function(exp, env, kont) {
-        return applyKont(kont, ['name=arg', value(exp[1], env), value(exp[2], env)])
+    // if a e1 e2
+    'begin': function(exp, env, kont) {
+        return applyKont(kont, value(exp[exp.length - 1], env))
     },
     // call/cc a
     'callcc': function(exp, env, kont) {
         return applyProc(value(exp[1], env), env('self'), [continuation(kont)], kont)
     },
-    // : obj fn a ...
-    '::': function(exp, env, kont) {
+    // .name-arg name arg
+    'named-arg': function(exp, env, kont) {
+        return applyKont(kont, ['name=arg', value(exp[1], env), value(exp[2], env)])
+    },
+    // .apply-method obj method a ...
+    'apply-method': function(exp, env, kont) {
         var args = exp.slice(3).map(a => value(a, env))
         return applyProc(value(exp[2], env), value(exp[1], env), args, kont)
     },
     // fn a a ...
-    'apply': function(exp, env, kont) {
+    'apply-function': function(exp, env, kont) {
         var args = exp.slice(1).map(a => value(a, env))
         return applyProc(value(exp[0], env), env('self'), args, kont)
     },
@@ -182,11 +182,11 @@ function anf(exp) {
     if (!Array.isArray(exp))
         return exp
 
-    var func = anfRules[ exp[0] ] || anfRules.apply,
+    var func = anfRules[ exp[0] ] || anfRules['apply-function'],
         wrapper = [ ]
 
     exp = func(exp, function(exp) {
-        var sym = symbol()
+        var sym = '#a' + (anf.index = (anf.index || 0) + 1)
         wrapper.push([sym, exp])
         return sym
     })
@@ -223,7 +223,7 @@ var anfRules = {
         return exp
     },
     // [c c1] -> [let #1 c [let #2 c1 [#1 #2]]]
-    'apply': function(exp, wrap) {
+    'apply-function': function(exp, wrap) {
         if (Array.isArray(exp[0]))
             exp[0] = wrap(exp[0])
         // all the arguments must be wrapped because they may change when evaluating
@@ -234,51 +234,8 @@ var anfRules = {
     },
 }
 
-function desugar(exp) {
-    if (!Array.isArray(exp))
-        return exp
-
-    var func = desugarSyntax[ exp[0] ]
-    return (func ? func(exp) : exp).map(desugar)
-}
-
-var desugarSyntax = {
-    // [let c1 e1 c2 e2 ...] -> [let c1 e1 [let c2 e2]]
-    'let': function desugarLet(exp) {
-        if (exp.length <= 2)
-            return ['let', undefined, undefined, exp[exp.length - 1]]
-        else if (exp.length <= 4)
-            return exp
-        var next = desugarLet(['let'].concat(exp.slice(3)))
-        return ['let', exp[1], exp[2], next]
-    },
-    // [if c1 e1 c2 e2 ...] -> [if c1 e1 [if c2 e2]]
-    'if': function desugarIf(exp) {
-        if (exp.length <= 4)
-            return exp
-        var next = desugarIf(['if'].concat(exp.slice(3)))
-        return ['if', exp[1], exp[2], next]
-    },
-    // [and e1 e2] -> [let # e1 [if # e2 #]]
-    'and': function(exp) {
-        var sym = symbol()
-        return ['let', sym, exp[1], ['if', sym, exp[2], sym]]
-    },
-    // [or e1 e2] -> [let # e1 [if # # e2]]
-    'or': function(exp) {
-        var sym = symbol()
-        return ['let', sym, exp[1], ['if', sym, sym, exp[2]]]
-    },
-    // [: obj methodName arg ...] -> [let # obj [: # [. # methodName] arg ...]]
-    ':': function(exp) {
-        var sym = symbol(), fn = ['.', sym, exp[2]]
-        return ['let', sym, exp[1], ['::', sym, fn].concat(exp.slice(3))]
-    },
-}
-
 function run(exp, env, kont) {
     if (!exp.isStatement) {
-        exp = desugar(exp)
         exp = anf(exp)
         exp = stmt(exp)
     }

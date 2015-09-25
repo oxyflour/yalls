@@ -14,6 +14,10 @@
 		return t;
 	}
 
+	function symbol() {
+		return '#g' + (symbol.index = (symbol.index || 0) + 1);
+	}
+
 	function beginStringGen(tag) {
 		return function (m) {
 			this.push(tag);
@@ -106,6 +110,29 @@
 		return count(m);
 	}]];
 
+	// [let c1 e1 c2 e2 ...] -> [let c1 e1 [let c2 e2]]
+	function letExp(vars, body) {
+		if (vars.length < 2) return ['let', undefined, undefined, body];else if (vars.length == 2) return ['let', vars[0], vars[1], body];else return ['let', vars[0], vars[1], letExp(vars.slice(2), body)];
+	}
+
+	// [if c1 e1 c2 e2 ...] -> [if c1 e1 [if c2 e2]]
+	function ifExp(conds) {
+		if (conds.length < 3) return ['if', conds[0], conds[1], conds[2]];else return ['if', conds[0], conds[1], ifExp(conds.slice(2))];
+	}
+
+	// [and e1 e2] -> [let # e1 [if # e2 #]]
+	function andExp(operator, exp1, exp2) {
+		var sym = symbol();
+		if (operator.value === 'and') return ['let', sym, exp1, ['if', sym, exp2, sym]];else if (operator.value === 'or') return ['let', sym, exp1, ['if', sym, sym, exp2]];else return [operator, exp1, exp2];
+	}
+
+	// [: obj methodName arg ...] -> [let # obj [: # [. # methodName] arg ...]]
+	function applyExp(object, methodName, args) {
+		var sym = symbol(),
+		    fn = ['.', sym, methodName];
+		return ['let', sym, object, ['apply-method', sym, fn].concat(args)];
+	}
+
 	var grammars = [['S', ['block']], ['block', ['body']], ['block', ['newlines', 'body'], function (_n, b) {
 		return b;
 	}], ['body', ['stmt'], function (s) {
@@ -118,7 +145,7 @@
 		return l.concat([s]);
 	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']],
 	//	['stmt', ['primary', 'explist'],
-	//		(f, a) => f[0] === '.' ? [':', f[1], f].concat(a) : [f].concat(a)],
+	//		(f, a) => f[0] === '.' ? desugarApplyMethod(['apply-method', f[1], f].concat(a) : [f].concat(a)]),
 	['stmt', ['throw', 'exp'], function (t, e) {
 		return [t, e];
 	}], ['stmt', ['fn', 'fnname', 'pars', 'block', 'end'], function (_func, a, p, b, _end) {
@@ -129,7 +156,7 @@
 		var set = ['set'];
 		// transform [set [. obj key] val] -> [set # [. obj key val]]
 		li.forEach(function (a, i) {
-			Array.isArray(a) && a[0] === '.' ? set.push('...', ['.', a[1], a[2], le[i]]) : set.push(a, le[i]);
+			Array.isArray(a) && a[0] === '.' ? set.push('#tmp', ['.', a[1], a[2], le[i]]) : set.push(a, le[i]);
 		});
 		return set;
 	}], ['exp', ['sprimary']], ['exp', ['NOT', 'exp'], function (o, e) {
@@ -137,7 +164,7 @@
 	}], ['exp', ['exp', '|', 'exp'], function (e1, o, e2) {
 		return [e2, e1];
 	}], ['exp', ['exp', 'AND', 'exp'], function (e1, o, e2) {
-		return [o, e1, e2];
+		return andExp(o, e1, e2);
 	}], ['exp', ['exp', 'CMP', 'exp'], function (e1, o, e2) {
 		return [o, e1, e2];
 	}], ['exp', ['exp', 'ADD', 'exp'], function (e1, o, e2) {
@@ -155,19 +182,19 @@
 	}], ['primary', ['primary', '.', 'ID'], function (p, _d, i) {
 		return ['.', p, token('STR', i.value)];
 	}], ['primary', ['do', 'block', 'end'], function (_do, b, _end) {
-		return ['let', b];
+		return letExp([], b);
 	}], ['primary', ['let', 'fieldlist', 'do', 'block', 'end'], function (_let, l, _do, b, _end) {
-		return ['let'].concat(l.map(function (v, i) {
+		return letExp(l.map(function (v, i) {
 			return i % 2 ? v : v.value;
-		})).concat([b]);
+		}), b);
 	}], ['primary', ['if', 'conds', 'end'], function (_if, c) {
-		return ['if'].concat(c);
+		return ifExp(c);
 	}], ['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'], function (_for, i, _eq, t, _do, b, _end) {
 		return ['for', t, ['lambda'].concat(i).concat([b])];
 	}], ['primary', ['while', 'exp', 'do', 'block', 'end'], function (_while, e, _do, b, _end) {
 		return ['while', e, b];
 	}], ['primary', ['primary', 'args'], function (f, a) {
-		return f[0] === '.' ? [':', f[1], f[2]].concat(a) : [f].concat(a);
+		return f[0] === '.' ? applyExp(f[1], f[2], a) : [f].concat(a);
 	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_func, p, b, _end) {
 		return ['lambda'].concat(p).concat([b]);
 	}], ['primary', ['{', '|', 'idlist', '|', 'block', '}'], function (_l, _s, p, _d, b, _end) {
@@ -223,9 +250,9 @@
 	}], ['arg', ['exp'], function (e) {
 		return e;
 	}], ['arg', ['ID', '=', 'exp'], function (i, _eq, e) {
-		return ['name=arg', token('STR', i.value), e];
+		return ['named-arg', token('STR', i.value), e];
 	}], ['arg', ['STR', '=', 'exp'], function (i, _eq, e) {
-		return ['name=arg', i, e];
+		return ['named-arg', i, e];
 	}],
 
 	// for iterator

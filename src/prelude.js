@@ -50,10 +50,6 @@ var root = {
 	'==': (a, b) => a === b,
 	'~=': (a, b) => a !== b,
 
-	'begin': function() {
-		return arguments[arguments.length - 1]
-	},
-
 	'for': function(iterator, func) {
 		var data = [ ], ret = [ ]
 		while (data = iterator.apply(undefined, data))
@@ -113,13 +109,6 @@ var root = {
 	'.': function f(obj) {
 		var fn = obj['@'] || self['@'],
 			args = Array.prototype.slice.call(arguments).slice(1)
-		return fn.apply2(obj, args, f.arga)
-	},
-
-	':': function f(obj, fn) {
-		if (!fn)
-			throw 'YallsRuntime: method "' + method + '" does not exist on object ' + obj
-		var args = Array.prototype.slice.call(arguments).slice(2)
 		return fn.apply2(obj, args, f.arga)
 	},
 
