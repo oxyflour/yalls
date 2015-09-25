@@ -165,9 +165,9 @@
 		return ['while', e, b];
 	}], ['primary', ['primary', 'args'], function (f, a) {
 		return f[0] === '.' ? [':', f[1], f].concat(a) : [f].concat(a);
-	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_func, p, b, _end) {
+	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_fn, p, b, _end) {
 		return ['lambda'].concat(p).concat([b]);
-	}], ['primary', ['{', '|', 'idlist', '|', 'block', '}'], function (_l, _s, p, _d, b, _end) {
+	}], ['primary', ['fn', 'idlist', '.', 'exp'], function (_fn, p, _d, b) {
 		return ['lambda'].concat(p).concat([b]);
 	}], ['primary', ['try', 'block', 'catch', 'ID', 'do', 'block', 'end'], function (_try, b, _catch, i, _do, d, _end) {
 		return ['try', b, i, d];
@@ -189,11 +189,7 @@
 		return [e];
 	}], ['explist', ['explist', ',', 'exp'], function (l, _c, e) {
 		return l.concat([e]);
-	}], ['fnname', ['ID']], ['fnname', ['fnname', '[', 'exp', ']'], function (p, _l, e, _r) {
-		return ['.', p, e];
-	}], ['fnname', ['fnname', '.', 'ID'], function (p, _dot, i) {
-		return ['.', p, token('STR', i.value)];
-	}], ['variable', ['ID']], ['variable', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
+	}], ['fnname', ['ID']], ['variable', ['ID']], ['variable', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
 		return ['.', p, e];
 	}], ['variable', ['primary', '.', 'ID'], function (p, _dot, i) {
 		return ['.', p, token('STR', i.value)];

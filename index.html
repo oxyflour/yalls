@@ -46,32 +46,36 @@ mkGenerator = fn(iter, next)
 		end)
 	end
 	fn()
-		n = next()
-		next = n.next
-		n.value
+		if next then
+			n = next()
+			next = n.next
+			n.value
+		end
 	end
 end
 
 iter = mkGenerator(fn(yield)
     yield(1)
 
-    echo('yielding in if')
-
+    echo('[i] yielding in if')
     if yield(2) then
     	yield(3)
     else
     	yield(4)
     end
 
-    echo('yielding in function')
-
-    yield(5)
+    echo('[i] yielding in function')
+    f = fn() yield('a') end
+    f()
+    f()
+    f()
 
 end)
 
-echo(iter())
+$('<button>Yield</button>').click(fn(e)
+	echo(iter())
+end).appendTo('#result')
 
-console.yieldNext = iter
 
 </script>
 <script title="loop with call/cc" type="script/x-lua">
@@ -217,13 +221,12 @@ $('#result').append(text)
 
 	var env = evaluate.environment(null, prelude)
 	env('echo', function() {
-		$('<pre></pre>')
-			.text(Array.prototype.slice.call(arguments).join(' '))
-			.appendTo('#console')
+		var content = Array.prototype.slice.call(arguments)
+			.map(function(a) { return '' + a }).join(' ')
+		$('<pre></pre>').text(content).appendTo('#console')
 	})
 	env('console', console)
 	env('$', $)
-	env('log', console.log.bind(console))
 
 	// compiled table, will be loaded later
 	var table
