@@ -117,7 +117,7 @@
 
 	// [if c1 e1 c2 e2 ...] -> [if c1 e1 [if c2 e2]]
 	function ifExp(conds) {
-		if (conds.length < 3) return ['if', conds[0], conds[1], conds[2]];else return ['if', conds[0], conds[1], ifExp(conds.slice(2))];
+		if (conds.length <= 3) return ['if', conds[0], conds[1], conds[2]];else return ['if', conds[0], conds[1], ifExp(conds.slice(2))];
 	}
 
 	// [and e1 e2] -> [let # e1 [if # e2 #]]
