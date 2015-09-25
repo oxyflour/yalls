@@ -116,7 +116,10 @@
 		return ['begin', s];
 	}], ['stmtlist', ['stmtlist', 'cstmt'], function (l, s) {
 		return l.concat([s]);
-	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']], ['stmt', ['throw', 'exp'], function (t, e) {
+	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']],
+	//	['stmt', ['primary', 'explist'],
+	//		(f, a) => f[0] === '.' ? [':', f[1], f].concat(a) : [f].concat(a)],
+	['stmt', ['throw', 'exp'], function (t, e) {
 		return [t, e];
 	}], ['stmt', ['fn', 'fnname', 'pars', 'block', 'end'], function (_func, a, p, b, _end) {
 		var f = ['lambda'].concat(p).concat([b]);
@@ -164,10 +167,10 @@
 	}], ['primary', ['while', 'exp', 'do', 'block', 'end'], function (_while, e, _do, b, _end) {
 		return ['while', e, b];
 	}], ['primary', ['primary', 'args'], function (f, a) {
-		return f[0] === '.' ? [':', f[1], f].concat(a) : [f].concat(a);
-	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_fn, p, b, _end) {
+		return f[0] === '.' ? [':', f[1], f[2]].concat(a) : [f].concat(a);
+	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_func, p, b, _end) {
 		return ['lambda'].concat(p).concat([b]);
-	}], ['primary', ['fn', 'idlist', '.', 'exp'], function (_fn, p, _d, b) {
+	}], ['primary', ['{', '|', 'idlist', '|', 'block', '}'], function (_l, _s, p, _d, b, _end) {
 		return ['lambda'].concat(p).concat([b]);
 	}], ['primary', ['try', 'block', 'catch', 'ID', 'do', 'block', 'end'], function (_try, b, _catch, i, _do, d, _end) {
 		return ['try', b, i, d];
@@ -189,7 +192,11 @@
 		return [e];
 	}], ['explist', ['explist', ',', 'exp'], function (l, _c, e) {
 		return l.concat([e]);
-	}], ['fnname', ['ID']], ['variable', ['ID']], ['variable', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
+	}], ['fnname', ['ID']], ['fnname', ['fnname', '[', 'exp', ']'], function (p, _l, e, _r) {
+		return ['.', p, e];
+	}], ['fnname', ['fnname', '.', 'ID'], function (p, _dot, i) {
+		return ['.', p, token('STR', i.value)];
+	}], ['variable', ['ID']], ['variable', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
 		return ['.', p, e];
 	}], ['variable', ['primary', '.', 'ID'], function (p, _dot, i) {
 		return ['.', p, token('STR', i.value)];

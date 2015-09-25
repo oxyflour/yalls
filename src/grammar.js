@@ -158,6 +158,8 @@ var grammars = [
 	['cstmt', ['cstmt', 'NEWLINE']],
 
 	['stmt', ['exp']],
+//	['stmt', ['primary', 'explist'],
+//		(f, a) => f[0] === '.' ? [':', f[1], f].concat(a) : [f].concat(a)],
 	['stmt', ['throw', 'exp'],
 		(t, e) => [t, e]],
 	['stmt', ['fn', 'fnname', 'pars', 'block', 'end'], (_func, a, p, b, _end) => {
@@ -216,7 +218,7 @@ var grammars = [
 	['primary', ['while', 'exp', 'do', 'block', 'end'],
 		(_while, e, _do, b, _end) => ['while', e, b]],
 	['primary', ['primary', 'args'],
-		(f, a) => f[0] === '.' ? [':', f[1], f].concat(a) : [f].concat(a)],
+		(f, a) => f[0] === '.' ? [':', f[1], f[2]].concat(a) : [f].concat(a)],
 	['primary', ['fn', 'pars', 'block', 'end'],
 		(_func, p, b, _end) => ['lambda'].concat(p).concat([b])],
 	['primary', ['{', '|', 'idlist', '|', 'block', '}'],

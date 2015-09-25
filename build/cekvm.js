@@ -16,6 +16,10 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         return ret;
     };
 
+    function symbol() {
+        return '#g' + (symbol.index = (symbol.index || 0) + 1);
+    }
+
     /*
      * CEK machine implement
      */
@@ -113,119 +117,154 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
     }
 
     function step(exp, env, kont) {
-        if (!(exp && exp.isStatement)) {
-            return applyKont(kont, value(exp, env));
-        }
+        if (!(exp && exp.isStatement)) return applyKont(kont, value(exp, env));
 
-        var head = exp[0];
-        if (head === 'lambda') {
+        var func = stepStmts[exp[0]] || stepStmts.apply;
+        return func(exp, env, kont);
+    }
+
+    var stepStmts = {
+        // closure
+        'lambda': function lambda(exp, env, kont) {
             return [closure(exp, env), env, kont];
-        }
+        },
+        // let v e1 b
+        'let': function _let(exp, env, kont) {
+            return [exp[2], env, [exp[1], exp[3], env, kont]];
+        },
+        // set v1 a1 v2 a2 ...
+        'set': function set(exp, env, kont) {
+            for (var i = 1, pair = []; i < exp.length; i += 2) pair.push(exp[i], value(exp[i + 1], env));
+            for (var i = 0, last = undefined; i < pair.length; i += 2) last = env(pair[i], pair[i + 1], true);
+            return applyKont(kont, last);
+        },
         // if a e1 e2
-        else if (head === 'if') {
-                return [value(exp[1], env) ? exp[2] : exp[3], env, kont];
-            }
-            // let v e1 b
-            else if (head === 'let') {
-                    return [exp[2], env, [exp[1], exp[3], env, kont]];
-                }
-                // set v1 a1 v2 a2 ...
-                else if (head === 'set') {
-                        for (var i = 1, pair = []; i < exp.length; i += 2) pair.push(exp[i], value(exp[i + 1], env));
-                        for (var i = 0, last = undefined; i < pair.length; i += 2) last = env(pair[i], pair[i + 1], true);
-                        return applyKont(kont, last);
-                    }
-                    // name=arg name arg
-                    else if (head === 'name=arg') {
-                            return applyKont(kont, ['name=arg', value(exp[1], env), value(exp[2], env)]);
-                        }
-                        // call/cc a
-                        else if (head === 'callcc') {
-                                return applyProc(value(exp[1], env), env('self'), [continuation(kont)], kont);
-                            }
-                            // : obj method a ...
-                            else if (head === ':') {
-                                    var args = exp.slice(3).map(function (a) {
-                                        return value(a, env);
-                                    });
-                                    return applyProc(value(exp[2], env), value(exp[1], env), args, kont);
-                                }
-                                // fn a a ...
-                                else {
-                                        var args = exp.slice(1).map(function (a) {
-                                            return value(a, env);
-                                        });
-                                        return applyProc(value(exp[0], env), env('self'), args, kont);
-                                    }
+        'if': function _if(exp, env, kont) {
+            return [value(exp[1], env) ? exp[2] : exp[3], env, kont];
+        },
+        // name=arg name arg
+        'name=arg': function nameArg(exp, env, kont) {
+            return applyKont(kont, ['name=arg', value(exp[1], env), value(exp[2], env)]);
+        },
+        // call/cc a
+        'callcc': function callcc(exp, env, kont) {
+            return applyProc(value(exp[1], env), env('self'), [continuation(kont)], kont);
+        },
+        // : obj fn a ...
+        '::': function _(exp, env, kont) {
+            var args = exp.slice(3).map(function (a) {
+                return value(a, env);
+            });
+            return applyProc(value(exp[2], env), value(exp[1], env), args, kont);
+        },
+        // fn a a ...
+        'apply': function apply(exp, env, kont) {
+            var args = exp.slice(1).map(function (a) {
+                return value(a, env);
+            });
+            return applyProc(value(exp[0], env), env('self'), args, kont);
+        }
+    };
+
+    function stmt(exp) {
+        if (!Array.isArray(exp)) return exp;
+
+        exp = exp.map(stmt);
+        exp.isStatement = true;
+        return exp;
     }
 
     // http://matt.might.net/articles/a-normalization/
     function anf(exp) {
         if (!Array.isArray(exp)) return exp;
 
-        var wrapper = [];
-        function wrap(exp) {
-            var s = '#g' + (anf.index = (anf.index || 0) + 1);
-            wrapper.push([s, exp]);
-            return s;
-        }
+        var func = anfRules[exp[0]] || anfRules.apply,
+            wrapper = [];
 
-        var head = exp[0];
-        if (head === 'lambda') {
-            // do nothing
-        } else if (head === 'if') {
-                // [if c1 e1 c2 e2 ...] -> [if c1 e1 [if c2 e2]]
-                if (exp.length > 4) exp = ['if', exp[1], exp[2], ['if'].concat(exp.slice(3))];
-                // [if [...] exp1 exp2] -> [let $ [...] [if $ exp1 exp2]]
-                if (Array.isArray(exp[1])) exp[1] = wrap(exp[1]);
-            } else if (head === 'and') {
-                // [and e1 e2]
-                var s = exp[1];
-                if (Array.isArray(s)) s = wrap(s);
-                exp = ['if', s, exp[2], s];
-            } else if (head === 'or') {
-                // [or e1 e2]
-                var s = exp[1];
-                if (Array.isArray(s)) s = wrap(s);
-                exp = ['if', s, s, exp[2]];
-            } else if (head === 'let') {
-                // [let exp] -> [let nil nil exp]
-                if (exp.length < 4) exp = ['let', undefined, undefined, exp[exp.length - 1]];
-                // [let v1 e1 v2 e2 body] -> [let v1 e1 [let v2 e2 body]]
-                else if (exp.length > 4) exp = ['let', exp[1], exp[2], ['let'].concat(exp.slice(3))];
-            } else if (head === 'set') {
-                // [set v1 [...] v2 [...]] ->
-                //   [let $2 [...] [let $3 [...] [set v1 $2 v2 $3]]]
-                var syms = {},
-                    needsWrap = false;
-                for (var i = 1; i < exp.length; i += 2) if (Array.isArray(exp[i + 1])) needsWrap = syms[i + 1] = exp[i + 1];
-                if (needsWrap) exp = exp.map(function (e, i) {
-                    return syms[i] ? wrap(syms[i]) : e;
-                });
-            } else {
-                // [cexp cexp1] -> [let $1 cexp1 [let $2 cexp2 [$1 $2]]]
-                if (Array.isArray(exp[0])) exp[0] = wrap(exp[0]);
-                // all the arguments must be wrapped because they may change when evaluating
-                for (var i = 1; i < exp.length; i++) if (Array.isArray(exp[i]) || typeof exp[i] === 'string') exp[i] = wrap(exp[i]);
-            }
+        exp = func(exp, function (exp) {
+            var sym = symbol();
+            wrapper.push([sym, exp]);
+            return sym;
+        });
 
         exp = exp.map(anf);
+
         wrapper.reverse().forEach(function (pair) {
             exp = ['let', pair[0], anf(pair[1]), exp];
         });
+
         return exp;
     }
 
-    function stmt(exp) {
-        if (Array.isArray(exp)) {
-            exp = exp.map(stmt);
-            exp.isStatement = true;
+    var anfRules = {
+        // [lambda v ... b] -> [lambda v ... b]
+        'lambda': function lambda(exp, wrap) {
+            return exp;
+        },
+        // [let v e b] -> [let v e b]
+        'let': function _let(exp, wrap) {
+            return exp;
+        },
+        // [set v1 [...] v2 [...]] -> [let #1 [...] [let #2 [...] [set v1 #1 v2 #2]]]
+        'set': function set(exp, wrap) {
+            for (var i = 2; i < exp.length; i += 2) if (Array.isArray(exp[i]) || typeof exp[i] === 'string') exp[i] = wrap(exp[i]);
+            return exp;
+        },
+        // [if [...] e1 e2] -> [let # [...] [if # e1 e2]]
+        'if': function _if(exp, wrap) {
+            if (Array.isArray(exp[1])) exp[1] = wrap(exp[1]);
+            return exp;
+        },
+        // [c c1] -> [let #1 c [let #2 c1 [#1 #2]]]
+        'apply': function apply(exp, wrap) {
+            if (Array.isArray(exp[0])) exp[0] = wrap(exp[0]);
+            // all the arguments must be wrapped because they may change when evaluating
+            for (var i = 1; i < exp.length; i++) if (Array.isArray(exp[i]) || typeof exp[i] === 'string') exp[i] = wrap(exp[i]);
+            return exp;
         }
-        return exp;
+    };
+
+    function desugar(exp) {
+        if (!Array.isArray(exp)) return exp;
+
+        var func = desugarSyntax[exp[0]];
+        return (func ? func(exp) : exp).map(desugar);
     }
+
+    var desugarSyntax = {
+        // [let c1 e1 c2 e2 ...] -> [let c1 e1 [let c2 e2]]
+        'let': function desugarLet(exp) {
+            if (exp.length <= 2) return ['let', undefined, undefined, exp[exp.length - 1]];else if (exp.length <= 4) return exp;
+            var next = desugarLet(['let'].concat(exp.slice(3)));
+            return ['let', exp[1], exp[2], next];
+        },
+        // [if c1 e1 c2 e2 ...] -> [if c1 e1 [if c2 e2]]
+        'if': function desugarIf(exp) {
+            if (exp.length <= 4) return exp;
+            var next = desugarIf(['if'].concat(exp.slice(3)));
+            return ['if', exp[1], exp[2], next];
+        },
+        // [and e1 e2] -> [let # e1 [if # e2 #]]
+        'and': function and(exp) {
+            var sym = symbol();
+            return ['let', sym, exp[1], ['if', sym, exp[2], sym]];
+        },
+        // [or e1 e2] -> [let # e1 [if # # e2]]
+        'or': function or(exp) {
+            var sym = symbol();
+            return ['let', sym, exp[1], ['if', sym, sym, exp[2]]];
+        },
+        // [: obj methodName arg ...] -> [let # obj [: # [. # methodName] arg ...]]
+        ':': function _(exp) {
+            var sym = symbol(),
+                fn = ['.', sym, exp[2]];
+            return ['let', sym, exp[1], ['::', sym, fn].concat(exp.slice(3))];
+        }
+    };
 
     function run(exp, env, kont) {
         if (!exp.isStatement) {
+            exp = desugar(exp);
             exp = anf(exp);
             exp = stmt(exp);
         }
