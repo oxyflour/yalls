@@ -75,7 +75,9 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			return a !== b;
 		},
 
-		'for': function _for(iterator, func) {
+		'map': function map(iterator, func) {
+			if (typeof iterator !== 'function') iterator = (iterator.length >= 0 ? root.ipair : root.pair)(iterator);
+
 			var data = [],
 			    ret = [];
 			while (data = iterator.apply(undefined, data)) ret.push(func.apply(undefined, data));

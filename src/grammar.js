@@ -188,6 +188,22 @@ function whileExp(cond, block) {
 				['if', cond, ['begin', block, ['continue']]]]]]
 }
 
+// [for iter vars block]
+function forExp(iter, vars, block) {
+	var $data = symbol(), $iter = symbol(), $lambda = symbol(), $tmp = symbol(),
+		lambda = ['lambda'].concat(vars).concat([block])
+	return ['let', 'continue', 'nil',
+		['let', $iter, iter,
+		['let', $lambda, lambda,
+		['let', $data, ['apply-args', 'self', $iter, $data],
+		['let', symbol(), ['callcc', ['lambda', 'cc', ['set-ext', 'continue', 'cc']]],
+			['if', $data,
+				['let', $tmp, ['apply-args', 'self', $iter, $data],
+				['let', symbol(), ['apply-args', 'self', $lambda, $data],
+				['let', symbol(), ['set-ext', $data, $tmp],
+					['continue']]]]]]]]]]
+}
+
 // [and/or e1 e2] -> [let # e1 [if # e2 #]]
 function andExp(operator, exp1, exp2) {
     var sym = symbol()
@@ -285,7 +301,7 @@ var grammars = [
 	['primary', ['if', 'conds', 'end'],
 		(_if, c) => ifExp(c)],
 	['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'],
-		(_for, i, _eq, t, _do, b, _end) => ['for', t, ['lambda'].concat(i).concat([b])]],
+		(_for, i, _eq, t, _do, b, _end) => forExp(t, i, b)],
 	['primary', ['while', 'exp', 'do', 'block', 'end'],
 		(_while, e, _do, b, _end) => whileExp(e, b)],
 	['primary', ['primary', 'args'],

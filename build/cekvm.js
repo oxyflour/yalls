@@ -72,10 +72,10 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         return con;
     }
 
-    function applyProc(proc, self, paras, kont) {
+    function applyProc(self, proc, paras, kont) {
         var args = [],
             arga = {};
-        paras.forEach(function (e) {
+        paras && paras.forEach(function (e) {
             if (Array.isArray(e) && e[0] === 'name=arg') arga[e[1]] = e[2];else args.push(e);
         });
 
@@ -150,25 +150,29 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         },
         // call/cc a
         'callcc': function callcc(exp, env, kont) {
-            return applyProc(value(exp[1], env), env('self'), [continuation(kont)], kont);
+            return applyProc(env('self'), value(exp[1], env), [continuation(kont)], kont);
         },
-        // .name-arg name arg
+        // name-arg name arg
         'named-arg': function namedArg(exp, env, kont) {
             return applyKont(kont, ['name=arg', value(exp[1], env), value(exp[2], env)]);
         },
-        // .apply-method obj method a ...
+        // apply obj method args
+        'apply-args': function applyArgs(exp, env, kont) {
+            return applyProc(value(exp[1], env), value(exp[2], env), value(exp[3], env), kont);
+        },
+        // apply-method obj method a a ...
         'apply-method': function applyMethod(exp, env, kont) {
             var args = exp.slice(3).map(function (a) {
                 return value(a, env);
             });
-            return applyProc(value(exp[2], env), value(exp[1], env), args, kont);
+            return applyProc(value(exp[1], env), value(exp[2], env), args, kont);
         },
         // fn a a ...
         'apply-function': function applyFunction(exp, env, kont) {
             var args = exp.slice(1).map(function (a) {
                 return value(a, env);
             });
-            return applyProc(value(exp[0], env), env('self'), args, kont);
+            return applyProc(env('self'), value(exp[0], env), args, kont);
         }
     };
 

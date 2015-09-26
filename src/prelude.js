@@ -50,7 +50,10 @@ var root = {
 	'==': (a, b) => a === b,
 	'~=': (a, b) => a !== b,
 
-	'for': function(iterator, func) {
+	'map': function(iterator, func) {
+		if (typeof(iterator) !== 'function')
+			iterator = (iterator.length >= 0 ? root.ipair : root.pair)(iterator)
+
 		var data = [ ], ret = [ ]
 		while (data = iterator.apply(undefined, data))
 			ret.push(func.apply(undefined, data))

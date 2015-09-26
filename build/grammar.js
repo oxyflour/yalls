@@ -146,6 +146,16 @@
 		return ['callcc', ['lambda', 'break', 'continue', ['begin', ['callcc', ['lambda', 'cc', ['set-ext', 'continue', 'cc']]], ['if', cond, ['begin', block, ['continue']]]]]];
 	}
 
+	// [for iter vars block]
+	function forExp(iter, vars, block) {
+		var $data = symbol(),
+		    $iter = symbol(),
+		    $lambda = symbol(),
+		    $tmp = symbol(),
+		    lambda = ['lambda'].concat(vars).concat([block]);
+		return ['let', 'continue', 'nil', ['let', $iter, iter, ['let', $lambda, lambda, ['let', $data, ['apply-args', 'self', $iter, $data], ['let', symbol(), ['callcc', ['lambda', 'cc', ['set-ext', 'continue', 'cc']]], ['if', $data, ['let', $tmp, ['apply-args', 'self', $iter, $data], ['let', symbol(), ['apply-args', 'self', $lambda, $data], ['let', symbol(), ['set-ext', $data, $tmp], ['continue']]]]]]]]]];
+	}
+
 	// [and/or e1 e2] -> [let # e1 [if # e2 #]]
 	function andExp(operator, exp1, exp2) {
 		var sym = symbol();
@@ -216,7 +226,7 @@
 	}], ['primary', ['if', 'conds', 'end'], function (_if, c) {
 		return ifExp(c);
 	}], ['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'], function (_for, i, _eq, t, _do, b, _end) {
-		return ['for', t, ['lambda'].concat(i).concat([b])];
+		return forExp(t, i, b);
 	}], ['primary', ['while', 'exp', 'do', 'block', 'end'], function (_while, e, _do, b, _end) {
 		return whileExp(e, b);
 	}], ['primary', ['primary', 'args'], function (f, a) {

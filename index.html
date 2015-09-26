@@ -86,22 +86,32 @@ iter = mkGenerator(fn(yield)
     yield(1)
 
     console.log('[i] yielding in if')
-    if yield('cond') then
-    	yield('then')
+    if yield('if cond') then
+    	yield('if then')
     else
-    	yield(4)
+    	yield('if else')
     end
 
     console.log('[i] yielding in function')
-    f = fn() yield('func') end
+    i = 0
+    f = fn()
+    	i += 1
+    	yield('func x' + i)
+    end
+    f()
     f()
     f()
 
-    console.log('[i] yielding in while')
+    console.log('[i] yielding in while-loop')
     i = 0
     while i < 3 do
     	i += 1
     	yield('while x' + i)
+    end
+
+    console.log('[i] yielding in for-loop')
+    for i = 1, 4 do
+    	yield('for x' + i)
     end
 
 end)
@@ -164,13 +174,13 @@ b.cry()
 <script title="dsl (html)" type="script/x-lua">
 htmlBuilder = fn(env)
 	css = fn()
-		(for v, k = pair(arga) do
+		map(arga, fn(v, k)
 			"{{ k }}:{{ v }}"
 		end).join(';')
 	end
 	env['@'] = fn(name)
 		local[name] or fn()
-			attrs = for v, k = pair(arga) do "{{ k }}=\"{{ v }}\"" end
+			attrs = map(arga, fn(v, k) "{{ k }}=\"{{ v }}\"" end)
 			tag = attrs.length and name + ' ' + attrs.join(' ') or name
 			if args.length then
 				"<{{ tag }}>{{ args.join('') }}</{{ name }}>"
