@@ -113,7 +113,7 @@ var actions = [
 	[/and|or/,
 		m => token('AND', m)],
 
-	[/if|elseif|then|else|let|fn|while|for|do|end|nil|local|try|catch|throw/,
+	[/if|elseif|then|else|let|fn|while|for|do|end|nil|local|try|catch|throw|export|import|from/,
 		m => token(m, m)],
 
 	[/[a-zA-Z\$_]+\d*\w*/,
@@ -231,6 +231,10 @@ var grammars = [
 	['cstmt', ['cstmt', 'NEWLINE']],
 
 	['stmt', ['exp']],
+	['stmt', ['export', 'exp'],
+		(_export, e) => ['set-ext', 'export', e]],
+	['stmt', ['import', 'idlist', 'from', 'STR'],
+		(_import, l, _from, s) => ['import', s, ['array'].concat(l)]],
 	['stmt', ['throw', 'exp'],
 		(t, e) => [t, e]],
 	['stmt', ['fn', 'ID', 'pars', 'block', 'end'],

@@ -43,7 +43,7 @@ assert(a * a == b * b + c * c and c > b)
 echo(a, b, c)
 
 </script>
-<script title="yield and generator" type="script/x-lua">
+<script title="generator with call/cc" id="genLib" type="script/x-lua">
 mkYield = fn(ret)
 	next = fn(cc, value)
 		fn()
@@ -75,6 +75,12 @@ mkGenerator = fn(iter)
 		end
 	end
 end
+
+-- used for other scripts
+export { mkGenerator }
+</script>
+<script title="yield and generator" type="script/x-lua">
+import mkGenerator from 'genLib'
 
 iter = mkGenerator(fn(yield)
     yield(1)
@@ -100,43 +106,13 @@ iter = mkGenerator(fn(yield)
 
 end)
 
-$('<button>Yield</button>').click(fn(e)
+$('<button>Click Me</button>').click(fn(e)
 	echo(iter())
 end).appendTo('#result')
 
 </script>
-<script title="async execute" type="script/x-lua">
-mkYield = fn(ret)
-	next = fn(cc, value)
-		fn()
-			callcc(fn(rcc)
-				ret := rcc
-				cc(value)
-			end)
-		end
-	end
-	fn(value)
-		callcc(fn(cc)
-			ret({ next = next(cc, value), value })
-		end)
-	end
-end
-
-mkGenerator = fn(iter)
-	next = fn()
-		callcc(fn(cc)
-			yield = mkYield(cc)
-			iter(yield)
-		end)
-	end
-	fn()
-		ret = next and next()
-		if ret then
-			next := ret.next
-			ret.value
-		end
-	end
-end
+<script title="async control flow" type="script/x-lua">
+import mkGenerator from 'genLib'
 
 doAsync = fn(exec, iter)
 	iter = mkGenerator(fn(yield)
@@ -295,6 +271,17 @@ $('#result').append(text)
 			.map(function(a) { return '' + a }).join(' ')
 		$('<pre></pre>').text(content).appendTo('#console')
 	})
+	env('import', function f(file, names) {
+		var input = $('#' + file).text(),
+			tree = grammar.parse(input, table),
+			sandbox = evaluate.environment(env)
+		evaluate(compile(tree), sandbox)
+
+		var exports = sandbox('export')
+		names.forEach(function(name) {
+			env(name, exports[name])
+		})
+	})
 	env('console', console)
 	env('date', Date)
 	env('timeout', setTimeout.bind(window))
@@ -320,6 +307,7 @@ $('#result').append(text)
 	var select = $('#code_samples')
 
 	$('script[type="script/x-lua"]').each(function(i, e) {
+		if (!e.title) return
 		if (!e.id) e.id = 'script' + i
 		select.append('<option value="' + e.id + '"">' + e.title + '</option>')
 	})

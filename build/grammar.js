@@ -91,7 +91,7 @@
 		return token('CMP', m);
 	}], [/and|or/, function (m) {
 		return token('AND', m);
-	}], [/if|elseif|then|else|let|fn|while|for|do|end|nil|local|try|catch|throw/, function (m) {
+	}], [/if|elseif|then|else|let|fn|while|for|do|end|nil|local|try|catch|throw|export|import|from/, function (m) {
 		return token(m, m);
 	}], [/[a-zA-Z\$_]+\d*\w*/, function (m) {
 		return token('ID', m);
@@ -169,7 +169,11 @@
 		return ['begin', s];
 	}], ['stmtlist', ['stmtlist', 'cstmt'], function (l, s) {
 		return l.concat([s]);
-	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']], ['stmt', ['throw', 'exp'], function (t, e) {
+	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']], ['stmt', ['export', 'exp'], function (_export, e) {
+		return ['set-ext', 'export', e];
+	}], ['stmt', ['import', 'idlist', 'from', 'STR'], function (_import, l, _from, s) {
+		return ['import', s, ['array'].concat(l)];
+	}], ['stmt', ['throw', 'exp'], function (t, e) {
 		return [t, e];
 	}], ['stmt', ['fn', 'ID', 'pars', 'block', 'end'], function (_func, i, p, b, _end) {
 		return ['set', i, ['lambda'].concat(p).concat([b])];
