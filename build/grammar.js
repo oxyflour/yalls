@@ -91,7 +91,7 @@
 		return token('CMP', m);
 	}], [/and|or/, function (m) {
 		return token('AND', m);
-	}], [/if|elseif|then|else|let|fn|while|for|do|end|nil|try|catch|throw/, function (m) {
+	}], [/if|elseif|then|else|let|fn|while|for|do|end|nil|local|try|catch|throw/, function (m) {
 		return token(m, m);
 	}], [/[a-zA-Z\$_]+\d*\w*/, function (m) {
 		return token('ID', m);
@@ -102,6 +102,8 @@
 		return token('NUM', parseInt(m), m);
 	}], [/\d+(?:\.\d+(?:[eE]-?\d+)?)?/, function (m) {
 		return token('NUM', parseFloat(m), m);
+	}], [/\:=|\+=|-=|\*=|\/=|%=/, function (m) {
+		return token('MUT', m);
 	}], [/\[|{|\(|\]|}|\)|\.|=|,|\:|\|/, function (m) {
 		return token(m, m);
 	}], [/\n|;/, function (m) {
@@ -115,12 +117,36 @@
 		if (vars.length < 2) return ['let', undefined, undefined, body];else if (vars.length == 2) return ['let', vars[0], vars[1], body];else return ['let', vars[0], vars[1], letExp(vars.slice(2), body)];
 	}
 
+	// [set c1 e1 c2 e2]
+	function setExp(varlist, explist) {
+		var set = ['set'];
+		// transform [set [. obj key] val] -> [set # [. obj key val]]
+		varlist.forEach(function (v, i) {
+			var exp = explist[i];
+			Array.isArray(v) && v[0] === '.' ? set.push(symbol(), ['.', v[1], v[2], exp]) : set.push(v, exp);
+		});
+		return set;
+	}
+
+	// [:=/+=/-=//=/*=/%= v e]
+	function mutExp(operator, v, exp) {
+		var set = ['set-ext'];
+		if (operator.value !== ':=') exp = [operator.value[0], v, exp];
+		Array.isArray(v) && v[0] === '.' ? set.push(symbol(), ['.', v[1], v[2], exp]) : set.push(v, exp);
+		return set;
+	}
+
 	// [if c1 e1 c2 e2 ...] -> [if c1 e1 [if c2 e2]]
 	function ifExp(conds) {
 		if (conds.length <= 3) return ['if', conds[0], conds[1], conds[2]];else return ['if', conds[0], conds[1], ifExp(conds.slice(2))];
 	}
 
-	// [and e1 e2] -> [let # e1 [if # e2 #]]
+	// [while cond block] ->
+	function whileExp(cond, block) {
+		return ['callcc', ['lambda', 'break', 'continue', ['begin', ['callcc', ['lambda', 'cc', ['set-ext', 'continue', 'cc']]], ['if', cond, ['begin', block, ['continue']]]]]];
+	}
+
+	// [and/or e1 e2] -> [let # e1 [if # e2 #]]
 	function andExp(operator, exp1, exp2) {
 		var sym = symbol();
 		if (operator.value === 'and') return ['let', sym, exp1, ['if', sym, exp2, sym]];else if (operator.value === 'or') return ['let', sym, exp1, ['if', sym, sym, exp2]];else return [operator, exp1, exp2];
@@ -143,22 +169,14 @@
 		return ['begin', s];
 	}], ['stmtlist', ['stmtlist', 'cstmt'], function (l, s) {
 		return l.concat([s]);
-	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']],
-	//	['stmt', ['primary', 'explist'],
-	//		(f, a) => f[0] === '.' ? desugarApplyMethod(['apply-method', f[1], f].concat(a) : [f].concat(a)]),
-	['stmt', ['throw', 'exp'], function (t, e) {
+	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']], ['stmt', ['throw', 'exp'], function (t, e) {
 		return [t, e];
-	}], ['stmt', ['fn', 'fnname', 'pars', 'block', 'end'], function (_func, a, p, b, _end) {
-		var f = ['lambda'].concat(p).concat([b]);
-		// transform [set [. obj key] val] -> [set obj [. obj key val]]
-		return Array.isArray(a) && a[0] === '.' ? ['.', a[1], a[2], f] : ['set', a, f];
+	}], ['stmt', ['fn', 'ID', 'pars', 'block', 'end'], function (_func, i, p, b, _end) {
+		return ['set', i, ['lambda'].concat(p).concat([b])];
 	}], ['stmt', ['varlist', '=', 'explist'], function (li, _eq, le) {
-		var set = ['set'];
-		// transform [set [. obj key] val] -> [set # [. obj key val]]
-		li.forEach(function (a, i) {
-			Array.isArray(a) && a[0] === '.' ? set.push('#tmp', ['.', a[1], a[2], le[i]]) : set.push(a, le[i]);
-		});
-		return set;
+		return setExp(li, le);
+	}], ['stmt', ['variable', 'MUT', 'exp'], function (v, o, e) {
+		return mutExp(o, v, e);
 	}], ['exp', ['sprimary']], ['exp', ['NOT', 'exp'], function (o, e) {
 		return [o, e];
 	}], ['exp', ['exp', '|', 'exp'], function (e1, o, e2) {
@@ -175,10 +193,14 @@
 		return [o, e1, e2];
 	}], ['sprimary', ['primary']], ['sprimary', ['ADD', 'primary'], function (a, p) {
 		return [a, 0, p];
-	}], ['primary', ['ID']], ['primary', ['cstr']], ['primary', ['literal']], ['primary', ['(', 'exp', ')'], function (_l, c, _r) {
+	}], ['primary', ['ID']], ['primary', ['local']], ['primary', ['cstr']], ['primary', ['literal']], ['primary', ['local', 'ID'], function (_l, i) {
+		return ['.', 'local', i];
+	}], ['primary', ['(', 'exp', ')'], function (_l, c, _r) {
 		return c;
 	}], ['primary', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
 		return ['.', p, e];
+	}], ['primary', ['primary', '[', 'end', ']'], function (p, _l, e, _r) {
+		return ['array-last', p];
 	}], ['primary', ['primary', '.', 'ID'], function (p, _d, i) {
 		return ['.', p, token('STR', i.value)];
 	}], ['primary', ['do', 'block', 'end'], function (_do, b, _end) {
@@ -192,7 +214,7 @@
 	}], ['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'], function (_for, i, _eq, t, _do, b, _end) {
 		return ['for', t, ['lambda'].concat(i).concat([b])];
 	}], ['primary', ['while', 'exp', 'do', 'block', 'end'], function (_while, e, _do, b, _end) {
-		return ['while', e, b];
+		return whileExp(e, b);
 	}], ['primary', ['primary', 'args'], function (f, a) {
 		return f[0] === '.' ? applyExp(f[1], f[2], a) : [f].concat(a);
 	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_func, p, b, _end) {
@@ -219,10 +241,6 @@
 		return [e];
 	}], ['explist', ['explist', ',', 'exp'], function (l, _c, e) {
 		return l.concat([e]);
-	}], ['fnname', ['ID']], ['fnname', ['fnname', '[', 'exp', ']'], function (p, _l, e, _r) {
-		return ['.', p, e];
-	}], ['fnname', ['fnname', '.', 'ID'], function (p, _dot, i) {
-		return ['.', p, token('STR', i.value)];
 	}], ['variable', ['ID']], ['variable', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
 		return ['.', p, e];
 	}], ['variable', ['primary', '.', 'ID'], function (p, _dot, i) {
@@ -277,7 +295,9 @@
 	['literal', ['NUM']], ['literal', ['STR']], ['literal', ['nil']], ['literal', ['tableconst']], ['literal', ['arrayconst']],
 
 	// array constructor
-	['arrayconst', ['[', 'explist', ']'], function (_l, e, _r) {
+	['arrayconst', ['[', ']'], function (t) {
+		return ['array'];
+	}], ['arrayconst', ['[', 'explist', ']'], function (_l, e, _r) {
 		return ['array'].concat(e);
 	}],
 
@@ -309,7 +329,7 @@
 		ADD: [12, 'left'],
 		CMP: [11, 'left'],
 		AND: [10, 'left'],
-		'|': [10, 'left']
+		'|': [9, 'left']
 	};
 
 	var yajily = typeof window !== 'undefined' ? window.yajily : require('../../yajily');

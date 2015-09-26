@@ -113,7 +113,7 @@ var actions = [
 	[/and|or/,
 		m => token('AND', m)],
 
-	[/if|elseif|then|else|let|fn|while|for|do|end|nil|try|catch|throw/,
+	[/if|elseif|then|else|let|fn|while|for|do|end|nil|local|try|catch|throw/,
 		m => token(m, m)],
 
 	[/[a-zA-Z\$_]+\d*\w*/,
@@ -124,6 +124,9 @@ var actions = [
 		m => token('NUM', parseInt(m), m)],
 	[/\d+(?:\.\d+(?:[eE]-?\d+)?)?/,
 		m => token('NUM', parseFloat(m), m)],
+
+	[/\:=|\+=|-=|\*=|\/=|%=/,
+		m => token('MUT', m)],
 
 	[/\[|{|\(|\]|}|\)|\.|=|,|\:|\|/,
 		m => token(m, m)],
@@ -146,6 +149,28 @@ function letExp(vars, body) {
 		return ['let', vars[0], vars[1], letExp(vars.slice(2), body)]
 }
 
+// [set c1 e1 c2 e2]
+function setExp(varlist, explist) {
+	var set = ['set']
+	// transform [set [. obj key] val] -> [set # [. obj key val]]
+	varlist.forEach((v, i) => {
+		var exp = explist[i]
+		Array.isArray(v) && v[0] === '.' ?
+			set.push(symbol(), ['.', v[1], v[2], exp]) : set.push(v, exp)
+	})
+	return set
+}
+
+// [:=/+=/-=//=/*=/%= v e]
+function mutExp(operator, v, exp) {
+	var set = ['set-ext']
+	if (operator.value !== ':=')
+		exp = [operator.value[0], v, exp]
+	Array.isArray(v) && v[0] === '.' ?
+		set.push(symbol(), ['.', v[1], v[2], exp]) : set.push(v, exp)
+	return set
+}
+
 // [if c1 e1 c2 e2 ...] -> [if c1 e1 [if c2 e2]]
 function ifExp(conds) {
 	if (conds.length <= 3)
@@ -154,7 +179,16 @@ function ifExp(conds) {
     	return ['if', conds[0], conds[1], ifExp(conds.slice(2))]
 }
 
-// [and e1 e2] -> [let # e1 [if # e2 #]]
+// [while cond block] -> 
+function whileExp(cond, block) {
+	return ['callcc',
+		['lambda', 'break', 'continue',
+			['begin',
+				['callcc', ['lambda', 'cc', ['set-ext', 'continue', 'cc']]],
+				['if', cond, ['begin', block, ['continue']]]]]]
+}
+
+// [and/or e1 e2] -> [let # e1 [if # e2 #]]
 function andExp(operator, exp1, exp2) {
     var sym = symbol()
     if (operator.value === 'and')
@@ -197,25 +231,14 @@ var grammars = [
 	['cstmt', ['cstmt', 'NEWLINE']],
 
 	['stmt', ['exp']],
-//	['stmt', ['primary', 'explist'],
-//		(f, a) => f[0] === '.' ? desugarApplyMethod(['apply-method', f[1], f].concat(a) : [f].concat(a)]),
 	['stmt', ['throw', 'exp'],
 		(t, e) => [t, e]],
-	['stmt', ['fn', 'fnname', 'pars', 'block', 'end'], (_func, a, p, b, _end) => {
-		var f = ['lambda'].concat(p).concat([b])
-		// transform [set [. obj key] val] -> [set obj [. obj key val]]
-		return Array.isArray(a) && a[0] === '.' ?
-			['.', a[1], a[2], f] : ['set', a, f]
-	}],
-	['stmt', ['varlist', '=', 'explist'], (li, _eq, le) => {
-		var set = ['set']
-		// transform [set [. obj key] val] -> [set # [. obj key val]]
-		li.forEach((a, i) => {
-			Array.isArray(a) && a[0] === '.' ?
-				set.push('#tmp', ['.', a[1], a[2], le[i]]) : set.push(a, le[i])
-		})
-		return set
-	}],
+	['stmt', ['fn', 'ID', 'pars', 'block', 'end'],
+		(_func, i, p, b, _end) => ['set', i, ['lambda'].concat(p).concat([b])]],
+	['stmt', ['varlist', '=', 'explist'],
+		(li, _eq, le) => setExp(li, le)],
+	['stmt', ['variable', 'MUT', 'exp'],
+		(v, o, e) => mutExp(o, v, e)],
 
 	['exp', ['sprimary']],
 	['exp', ['NOT', 'exp'],
@@ -238,12 +261,17 @@ var grammars = [
 		(a, p) => [a, 0, p]],
 
 	['primary', ['ID']],
+	['primary', ['local']],
 	['primary', ['cstr']],
 	['primary', ['literal']],
+	['primary', ['local', 'ID'],
+		(_l, i) => ['.', 'local', i]],
 	['primary', ['(', 'exp', ')'],
 		(_l, c, _r) => c],
 	['primary', ['primary', '[', 'exp', ']'],
 		(p, _l, e, _r) => ['.', p, e]],
+	['primary', ['primary', '[', 'end', ']'],
+		(p, _l, e, _r) => ['array-last', p]],
 	['primary', ['primary', '.', 'ID'],
 		(p, _d, i) => ['.', p, token('STR', i.value)]],
 	['primary', ['do', 'block', 'end'],
@@ -255,7 +283,7 @@ var grammars = [
 	['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'],
 		(_for, i, _eq, t, _do, b, _end) => ['for', t, ['lambda'].concat(i).concat([b])]],
 	['primary', ['while', 'exp', 'do', 'block', 'end'],
-		(_while, e, _do, b, _end) => ['while', e, b]],
+		(_while, e, _do, b, _end) => whileExp(e, b)],
 	['primary', ['primary', 'args'],
 		(f, a) => f[0] === '.' ? applyExp(f[1], f[2], a) : [f].concat(a)],
 	['primary', ['fn', 'pars', 'block', 'end'],
@@ -286,12 +314,6 @@ var grammars = [
 		(e) => [e]],
 	['explist', ['explist', ',', 'exp'],
 		(l, _c, e) => l.concat([e])],
-
-	['fnname', ['ID']],
-	['fnname', ['fnname', '[', 'exp', ']'],
-		(p, _l, e, _r) => ['.', p, e]],
-	['fnname', ['fnname', '.', 'ID'],
-		(p, _dot, i) => ['.', p, token('STR', i.value)]],
 
 	['variable', ['ID']],
 	['variable', ['primary', '[', 'exp', ']'],
@@ -351,6 +373,8 @@ var grammars = [
 	['literal', ['arrayconst']],
 
 	// array constructor
+	['arrayconst', ['[', ']'],
+		(t) => ['array']],
 	['arrayconst', ['[', 'explist', ']'],
 		(_l, e, _r) => ['array'].concat(e)],
 
@@ -387,7 +411,7 @@ var precedence = {
 	ADD: [12, 'left'],
 	CMP: [11, 'left'],
 	AND: [10, 'left'],
-	'|': [10, 'left'],
+	'|': [ 9, 'left'],
 }
 
 var yajily = typeof(window) !== 'undefined' ? window.yajily : require('../../yajily')

@@ -132,6 +132,10 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			return Array.prototype.slice.call(arguments);
 		},
 
+		'array-last': function arrayLast(a) {
+			return a[a.length - 1];
+		},
+
 		'dict': function dict() {
 			var data = {};
 			for (var i = 0; i < arguments.length - 1; i += 2) data[arguments[i]] = arguments[i + 1];

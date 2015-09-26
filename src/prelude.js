@@ -97,6 +97,10 @@ var root = {
 		return Array.prototype.slice.call(arguments)
 	},
 
+	'array-last': function(a) {
+		return a[a.length - 1]
+	},
+
 	'dict': function() {
 		var data = { }
 		for (var i = 0; i < arguments.length - 1; i += 2)

@@ -137,6 +137,14 @@ var stepStmts = {
         for (var i = 1, pair = [ ]; i < exp.length; i += 2)
             pair.push(exp[i], value(exp[i + 1], env))
         for (var i = 0, last = undefined; i < pair.length; i += 2)
+            last = env(pair[i], pair[i + 1])
+        return applyKont(kont, last)
+    },
+    // set v1 a1 v2 a2 ...
+    'set-ext': function(exp, env, kont) {
+        for (var i = 1, pair = [ ]; i < exp.length; i += 2)
+            pair.push(exp[i], value(exp[i + 1], env))
+        for (var i = 0, last = undefined; i < pair.length; i += 2)
             last = env(pair[i], pair[i + 1], true)
         return applyKont(kont, last)
     },
@@ -209,10 +217,25 @@ var anfRules = {
     'let': function(exp, wrap) {
         return exp
     },
-    // [set v1 [...] v2 [...]] -> [let #1 [...] [let #2 [...] [set v1 #1 v2 #2]]]
+    // [set v1 [...] v2 [...]] -> [let #0 [set v1 v1 v2 v2]
+    //                                    [let #1 [...] [let #2 [...] [set-ext v1 #1 v2 #2]]]]
     'set': function(exp, wrap) {
+        var syms = { }, needsWrap = false
+        for (var i = 2; i < exp.length; i += 2) {
+            if (Array.isArray(exp[i]))
+                needsWrap = syms[i] = exp[i]
+        }
+        if (needsWrap) {
+            wrap(exp.map((e, i) => syms[i] ? exp[i - 1] : e))
+            exp = exp.map((e, i) => syms[i] ? wrap(e) : e)
+            exp[0] = 'set-ext'
+        }
+        return exp
+    },
+    // [set-ext v1 [...] v2 [...]] -> [let #1 [...] [let #2 [...] [set-ext v1 #1 v2 #2]]]
+    'set-ext': function(exp, wrap) {
         for (var i = 2; i < exp.length; i += 2)
-            if (Array.isArray(exp[i]) || typeof(exp[i]) === 'string')
+            if (Array.isArray(exp[i]))
                 exp[i] = wrap(exp[i])
         return exp
     },
