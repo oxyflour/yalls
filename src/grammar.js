@@ -197,7 +197,7 @@ function forExp(iter, vars, block) {
 	var $data = symbol(), $iter = symbol(), $lambda = symbol(), $tmp = symbol(),
 		lambda = ['lambda'].concat(vars).concat([block])
 	return ['let', 'continue', 'nil',
-		['let', $iter, iter,
+		['let', $iter, ['iterator', iter],
 		['let', $lambda, lambda,
 		['let', $data, [$iter, ['named-arg', strToken('@args'), $data]],
 		['let', symbol(), ['callcc', ['lambda', 'cc', ['set-env', 'continue', 'cc']]],

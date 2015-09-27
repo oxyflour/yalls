@@ -27,7 +27,7 @@ var self = {
 
 }
 
-var root = {
+var prelude = {
 
 	'nil': undefined,
 
@@ -50,11 +50,18 @@ var root = {
 	'==': (a, b) => a === b,
 	'~=': (a, b) => a !== b,
 
-	'map': function(iterator, func) {
-		if (typeof(iterator) !== 'function')
-			iterator = (iterator.length >= 0 ? root.ipair : root.pair)(iterator)
+	'iterator': function(object) {
+		if (typeof(object) === 'function')
+			return object
+		else if (Array.isArray(object))
+			return prelude.ipair(object)
+		else
+			return prelude.pair(object)
+	},
 
-		var data = [ ], ret = [ ]
+	'map': function(object, func) {
+		var data = [ ], ret = [ ],
+			iterator = prelude.iterator(object)
 		while (data = iterator.apply(undefined, data))
 			ret.push(func.apply(undefined, data))
 		return ret
@@ -122,8 +129,8 @@ var root = {
 }
 
 if (typeof(module) !== 'undefined')
-	module.exports = root
+	module.exports = prelude
 else if (typeof(window) !== 'undefined')
-	window.prelude = root
+	window.prelude = prelude
 
 })()

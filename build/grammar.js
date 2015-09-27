@@ -157,7 +157,7 @@
 		    $lambda = symbol(),
 		    $tmp = symbol(),
 		    lambda = ['lambda'].concat(vars).concat([block]);
-		return ['let', 'continue', 'nil', ['let', $iter, iter, ['let', $lambda, lambda, ['let', $data, [$iter, ['named-arg', strToken('@args'), $data]], ['let', symbol(), ['callcc', ['lambda', 'cc', ['set-env', 'continue', 'cc']]], ['if', $data, ['let', $tmp, [$iter, ['named-arg', strToken('@args'), $data]], ['let', symbol(), [$lambda, ['named-arg', strToken('@args'), $data]], ['let', symbol(), ['set-env', $data, $tmp], ['continue']]]]]]]]]];
+		return ['let', 'continue', 'nil', ['let', $iter, ['iterator', iter], ['let', $lambda, lambda, ['let', $data, [$iter, ['named-arg', strToken('@args'), $data]], ['let', symbol(), ['callcc', ['lambda', 'cc', ['set-env', 'continue', 'cc']]], ['if', $data, ['let', $tmp, [$iter, ['named-arg', strToken('@args'), $data]], ['let', symbol(), [$lambda, ['named-arg', strToken('@args'), $data]], ['let', symbol(), ['set-env', $data, $tmp], ['continue']]]]]]]]]];
 	}
 
 	// [and/or e1 e2] -> [let # e1 [if # e2 #]]

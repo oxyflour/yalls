@@ -28,7 +28,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 	};
 
-	var root = {
+	var prelude = {
 
 		'nil': undefined,
 
@@ -75,11 +75,14 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			return a !== b;
 		},
 
-		'map': function map(iterator, func) {
-			if (typeof iterator !== 'function') iterator = (iterator.length >= 0 ? root.ipair : root.pair)(iterator);
+		'iterator': function iterator(object) {
+			if (typeof object === 'function') return object;else if (Array.isArray(object)) return prelude.ipair(object);else return prelude.pair(object);
+		},
 
+		'map': function map(object, func) {
 			var data = [],
-			    ret = [];
+			    ret = [],
+			    iterator = prelude.iterator(object);
 			while (data = iterator.apply(undefined, data)) ret.push(func.apply(undefined, data));
 			return ret;
 		},
@@ -154,5 +157,5 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 	};
 
-	if (typeof module !== 'undefined') module.exports = root;else if (typeof window !== 'undefined') window.prelude = root;
+	if (typeof module !== 'undefined') module.exports = prelude;else if (typeof window !== 'undefined') window.prelude = prelude;
 })();
