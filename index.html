@@ -247,7 +247,7 @@ $('#result').append(text)
 		else if (tree === null || tree === undefined)
 			return undefined
 		else if (tree.type === 'STR')
-			return '"' + tree.value
+			return { yallsString:tree.value }
 		else if (tree.value !== undefined)
 			return tree.value
 		else

@@ -14,6 +14,10 @@ function token(type, value, string) {
 	return t
 }
 
+function strToken(value) {
+	return { type:'STR', value }
+}
+
 function symbol() {
     return '#g' + (symbol.index = (symbol.index || 0) + 1)
 }
@@ -151,7 +155,7 @@ function letExp(vars, body) {
 
 // [set c1 e1 c2 e2]
 function setExp(varlist, explist) {
-	var set = ['set']
+	var set = ['set-local']
 	// transform [set [. obj key] val] -> [set # [. obj key val]]
 	varlist.forEach((v, i) => {
 		var exp = explist[i]
@@ -163,7 +167,7 @@ function setExp(varlist, explist) {
 
 // [:=/+=/-=//=/*=/%= v e]
 function mutExp(operator, v, exp) {
-	var set = ['set-ext']
+	var set = ['set-env']
 	if (operator.value !== ':=')
 		exp = [operator.value[0], v, exp]
 	Array.isArray(v) && v[0] === '.' ?
@@ -184,7 +188,7 @@ function whileExp(cond, block) {
 	return ['callcc',
 		['lambda', 'break', 'continue',
 			['begin',
-				['callcc', ['lambda', 'cc', ['set-ext', 'continue', 'cc']]],
+				['callcc', ['lambda', 'cc', ['set-env', 'continue', 'cc']]],
 				['if', cond, ['begin', block, ['continue']]]]]]
 }
 
@@ -195,12 +199,12 @@ function forExp(iter, vars, block) {
 	return ['let', 'continue', 'nil',
 		['let', $iter, iter,
 		['let', $lambda, lambda,
-		['let', $data, ['apply-args', 'self', $iter, $data],
-		['let', symbol(), ['callcc', ['lambda', 'cc', ['set-ext', 'continue', 'cc']]],
+		['let', $data, [$iter, ['named-arg', strToken('@args'), $data]],
+		['let', symbol(), ['callcc', ['lambda', 'cc', ['set-env', 'continue', 'cc']]],
 			['if', $data,
-				['let', $tmp, ['apply-args', 'self', $iter, $data],
-				['let', symbol(), ['apply-args', 'self', $lambda, $data],
-				['let', symbol(), ['set-ext', $data, $tmp],
+				['let', $tmp, [$iter, ['named-arg', strToken('@args'), $data]],
+				['let', symbol(), [$lambda, ['named-arg', strToken('@args'), $data]],
+				['let', symbol(), ['set-env', $data, $tmp],
 					['continue']]]]]]]]]]
 }
 
@@ -218,7 +222,7 @@ function andExp(operator, exp1, exp2) {
 // [: obj methodName arg ...] -> [let # obj [: # [. # methodName] arg ...]]
 function applyExp(object, methodName, args) {
     var sym = symbol(), fn = ['.', sym, methodName]
-    return ['let', sym, object, ['apply-method', sym, fn].concat(args)]
+    return ['let', sym, object, [fn, ['named-arg', strToken('@self'), sym]].concat(args).concat()]
 }
 
 var grammars = [
@@ -248,13 +252,13 @@ var grammars = [
 
 	['stmt', ['exp']],
 	['stmt', ['export', 'exp'],
-		(_export, e) => ['set-ext', 'export', e]],
+		(_export, e) => ['set-env', 'export', e]],
 	['stmt', ['import', 'idlist', 'from', 'STR'],
 		(_import, l, _from, s) => ['import', s, ['array'].concat(l)]],
 	['stmt', ['throw', 'exp'],
 		(t, e) => [t, e]],
 	['stmt', ['fn', 'ID', 'pars', 'block', 'end'],
-		(_func, i, p, b, _end) => ['set', i, ['lambda'].concat(p).concat([b])]],
+		(_func, i, p, b, _end) => ['set-local', i, ['lambda'].concat(p).concat([b])]],
 	['stmt', ['varlist', '=', 'explist'],
 		(li, _eq, le) => setExp(li, le)],
 	['stmt', ['variable', 'MUT', 'exp'],
@@ -293,7 +297,7 @@ var grammars = [
 	['primary', ['primary', '[', 'end', ']'],
 		(p, _l, e, _r) => ['array-last', p]],
 	['primary', ['primary', '.', 'ID'],
-		(p, _d, i) => ['.', p, token('STR', i.value)]],
+		(p, _d, i) => ['.', p, strToken(i.value)]],
 	['primary', ['do', 'block', 'end'],
 		(_do, b, _end) => letExp([ ], b)],
 	['primary', ['let', 'fieldlist', 'do', 'block', 'end'],
@@ -316,9 +320,9 @@ var grammars = [
 	['cstr', ['cstr1', 'STR'],
 		(c, s) => ['+', c, s]],
 	['cstr1', ['BSTR', 'exp'],
-		(b, e) => ['+', token('STR', b.value), e]],
+		(b, e) => ['+', strToken(b.value), e]],
 	['cstr1', ['cstr1', 'BSTR', 'exp'],
-		(c, b, e) => ['+', ['+', c, token('STR', b.value)], e]],
+		(c, b, e) => ['+', ['+', c, strToken(b.value)], e]],
 
 	['varlist', ['variable'],
 		(v) => [v]],
@@ -339,7 +343,7 @@ var grammars = [
 	['variable', ['primary', '[', 'exp', ']'],
 		(p, _l, e, _r) => ['.', p, e]],
 	['variable', ['primary', '.', 'ID'],
-		(p, _dot, i) => ['.', p, token('STR', i.value)]],
+		(p, _dot, i) => ['.', p, strToken(i.value)]],
 
 	// parameters
 	['pars', ['(', ')'],
@@ -363,7 +367,7 @@ var grammars = [
 	['arg', ['exp'],
 		(e) => e],
 	['arg', ['ID', '=', 'exp'],
-		(i, _eq, e) => ['named-arg', token('STR', i.value), e]],
+		(i, _eq, e) => ['named-arg', strToken(i.value), e]],
 	['arg', ['STR', '=', 'exp'],
 		(i, _eq, e) => ['named-arg', i, e]],
 
@@ -415,9 +419,9 @@ var grammars = [
 	['fieldsep', ['NEWLINE']],
 
 	['field', ['ID'],
-		(i) => [token('STR', i.value), i]],
+		(i) => [strToken(i.value), i]],
 	['field', ['ID', '=', 'exp'],
-		(i, _eq, e) => [token('STR', i.value), e]],
+		(i, _eq, e) => [strToken(i.value), e]],
 	['field', ['STR', '=', 'exp'],
 		(i, _eq, e) => [i, e]],
 	['field', ['[', 'exp', ']', '=', 'exp'],

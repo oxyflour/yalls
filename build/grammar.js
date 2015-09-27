@@ -14,6 +14,10 @@
 		return t;
 	}
 
+	function strToken(value) {
+		return { type: 'STR', value: value };
+	}
+
 	function symbol() {
 		return '#g' + (symbol.index = (symbol.index || 0) + 1);
 	}
@@ -119,7 +123,7 @@
 
 	// [set c1 e1 c2 e2]
 	function setExp(varlist, explist) {
-		var set = ['set'];
+		var set = ['set-local'];
 		// transform [set [. obj key] val] -> [set # [. obj key val]]
 		varlist.forEach(function (v, i) {
 			var exp = explist[i];
@@ -130,7 +134,7 @@
 
 	// [:=/+=/-=//=/*=/%= v e]
 	function mutExp(operator, v, exp) {
-		var set = ['set-ext'];
+		var set = ['set-env'];
 		if (operator.value !== ':=') exp = [operator.value[0], v, exp];
 		Array.isArray(v) && v[0] === '.' ? set.push(symbol(), ['.', v[1], v[2], exp]) : set.push(v, exp);
 		return set;
@@ -143,7 +147,7 @@
 
 	// [while cond block] ->
 	function whileExp(cond, block) {
-		return ['callcc', ['lambda', 'break', 'continue', ['begin', ['callcc', ['lambda', 'cc', ['set-ext', 'continue', 'cc']]], ['if', cond, ['begin', block, ['continue']]]]]];
+		return ['callcc', ['lambda', 'break', 'continue', ['begin', ['callcc', ['lambda', 'cc', ['set-env', 'continue', 'cc']]], ['if', cond, ['begin', block, ['continue']]]]]];
 	}
 
 	// [for iter vars block]
@@ -153,7 +157,7 @@
 		    $lambda = symbol(),
 		    $tmp = symbol(),
 		    lambda = ['lambda'].concat(vars).concat([block]);
-		return ['let', 'continue', 'nil', ['let', $iter, iter, ['let', $lambda, lambda, ['let', $data, ['apply-args', 'self', $iter, $data], ['let', symbol(), ['callcc', ['lambda', 'cc', ['set-ext', 'continue', 'cc']]], ['if', $data, ['let', $tmp, ['apply-args', 'self', $iter, $data], ['let', symbol(), ['apply-args', 'self', $lambda, $data], ['let', symbol(), ['set-ext', $data, $tmp], ['continue']]]]]]]]]];
+		return ['let', 'continue', 'nil', ['let', $iter, iter, ['let', $lambda, lambda, ['let', $data, [$iter, ['named-arg', strToken('@args'), $data]], ['let', symbol(), ['callcc', ['lambda', 'cc', ['set-env', 'continue', 'cc']]], ['if', $data, ['let', $tmp, [$iter, ['named-arg', strToken('@args'), $data]], ['let', symbol(), [$lambda, ['named-arg', strToken('@args'), $data]], ['let', symbol(), ['set-env', $data, $tmp], ['continue']]]]]]]]]];
 	}
 
 	// [and/or e1 e2] -> [let # e1 [if # e2 #]]
@@ -166,7 +170,7 @@
 	function applyExp(object, methodName, args) {
 		var sym = symbol(),
 		    fn = ['.', sym, methodName];
-		return ['let', sym, object, ['apply-method', sym, fn].concat(args)];
+		return ['let', sym, object, [fn, ['named-arg', strToken('@self'), sym]].concat(args).concat()];
 	}
 
 	var grammars = [['S', ['block']], ['block', ['body']], ['block', ['newlines', 'body'], function (_n, b) {
@@ -180,13 +184,13 @@
 	}], ['stmtlist', ['stmtlist', 'cstmt'], function (l, s) {
 		return l.concat([s]);
 	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']], ['stmt', ['export', 'exp'], function (_export, e) {
-		return ['set-ext', 'export', e];
+		return ['set-env', 'export', e];
 	}], ['stmt', ['import', 'idlist', 'from', 'STR'], function (_import, l, _from, s) {
 		return ['import', s, ['array'].concat(l)];
 	}], ['stmt', ['throw', 'exp'], function (t, e) {
 		return [t, e];
 	}], ['stmt', ['fn', 'ID', 'pars', 'block', 'end'], function (_func, i, p, b, _end) {
-		return ['set', i, ['lambda'].concat(p).concat([b])];
+		return ['set-local', i, ['lambda'].concat(p).concat([b])];
 	}], ['stmt', ['varlist', '=', 'explist'], function (li, _eq, le) {
 		return setExp(li, le);
 	}], ['stmt', ['variable', 'MUT', 'exp'], function (v, o, e) {
@@ -216,7 +220,7 @@
 	}], ['primary', ['primary', '[', 'end', ']'], function (p, _l, e, _r) {
 		return ['array-last', p];
 	}], ['primary', ['primary', '.', 'ID'], function (p, _d, i) {
-		return ['.', p, token('STR', i.value)];
+		return ['.', p, strToken(i.value)];
 	}], ['primary', ['do', 'block', 'end'], function (_do, b, _end) {
 		return letExp([], b);
 	}], ['primary', ['let', 'fieldlist', 'do', 'block', 'end'], function (_let, l, _do, b, _end) {
@@ -240,9 +244,9 @@
 	}], ['cstr', ['cstr1', 'STR'], function (c, s) {
 		return ['+', c, s];
 	}], ['cstr1', ['BSTR', 'exp'], function (b, e) {
-		return ['+', token('STR', b.value), e];
+		return ['+', strToken(b.value), e];
 	}], ['cstr1', ['cstr1', 'BSTR', 'exp'], function (c, b, e) {
-		return ['+', ['+', c, token('STR', b.value)], e];
+		return ['+', ['+', c, strToken(b.value)], e];
 	}], ['varlist', ['variable'], function (v) {
 		return [v];
 	}], ['varlist', ['varlist', ',', 'variable'], function (l, _c, v) {
@@ -258,7 +262,7 @@
 	}], ['variable', ['ID']], ['variable', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
 		return ['.', p, e];
 	}], ['variable', ['primary', '.', 'ID'], function (p, _dot, i) {
-		return ['.', p, token('STR', i.value)];
+		return ['.', p, strToken(i.value)];
 	}],
 
 	// parameters
@@ -282,7 +286,7 @@
 	}], ['arg', ['exp'], function (e) {
 		return e;
 	}], ['arg', ['ID', '=', 'exp'], function (i, _eq, e) {
-		return ['named-arg', token('STR', i.value), e];
+		return ['named-arg', strToken(i.value), e];
 	}], ['arg', ['STR', '=', 'exp'], function (i, _eq, e) {
 		return ['named-arg', i, e];
 	}],
@@ -327,9 +331,9 @@
 	}], ['fieldlist', ['fieldlist', 'fieldsep', 'field'], function (l, _c, f) {
 		return l.concat(f);
 	}], ['fieldsep', [',']], ['fieldsep', ['NEWLINE']], ['field', ['ID'], function (i) {
-		return [token('STR', i.value), i];
+		return [strToken(i.value), i];
 	}], ['field', ['ID', '=', 'exp'], function (i, _eq, e) {
-		return [token('STR', i.value), e];
+		return [strToken(i.value), e];
 	}], ['field', ['STR', '=', 'exp'], function (i, _eq, e) {
 		return [i, e];
 	}], ['field', ['[', 'exp', ']', '=', 'exp'], function (_l, e1, _r, _eq, e2) {

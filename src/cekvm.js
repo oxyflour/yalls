@@ -55,7 +55,9 @@ function callenv(lambda, parent, self, args, arga) {
 
 function value(exp, env) {
     if (typeof(exp) === 'string')
-        return exp.substr(0, 1) === '"' ? exp.substr(1) : env(exp)
+        return env(exp)
+    else if (exp && exp.yallsString !== undefined)
+        return exp.yallsString
     else
         return exp
 }
@@ -77,14 +79,22 @@ function continuation(kont) {
     return con
 }
 
+function namedArg(name, value) {
+    return { name, value, isNamedArg:true }
+}
+
 function applyProc(self, proc, paras, kont) {
     var args = [ ], arga = { }
     paras && paras.forEach(e => {
-        if (Array.isArray(e) && e[0] === 'name=arg')
-            arga[ e[1] ] = e[2]
+        if (e && e.isNamedArg)
+            arga[ e.name ] = e.value
         else
             args.push(e)
     })
+    if (arga['@self'])
+        self = arga['@self']
+    if (arga['@args'])
+        args = arga['@args']
 
     if (proc && proc.yallsClosure) {
         var { lambda, parent } = proc.yallsClosure,
@@ -115,11 +125,19 @@ function applyKont(kont, value) {
     }
 }
 
+function applySet(exp, env, kont, setParent) {
+    for (var i = 1, pair = [ ]; i < exp.length; i += 2)
+        pair.push(exp[i], value(exp[i + 1], env))
+    for (var i = 0, last = undefined; i < pair.length; i += 2)
+        last = env(pair[i], pair[i + 1], setParent)
+    return applyKont(kont, last)
+}
+
 function step(exp, env, kont) {
     if (!(exp && exp.isStatement))
         return applyKont(kont, value(exp, env))
 
-    var func = stepStmts[ exp[0] ] || stepStmts['apply-function']
+    var func = stepStmts[ exp[0] ] || stepStmts.apply
     return func(exp, env, kont)
 }
 
@@ -132,25 +150,17 @@ var stepStmts = {
     'let': function(exp, env, kont) {
         return [exp[2], env, [exp[1], exp[3], env, kont]]
     },
-    // set v1 a1 v2 a2 ...
-    'set': function(exp, env, kont) {
-        for (var i = 1, pair = [ ]; i < exp.length; i += 2)
-            pair.push(exp[i], value(exp[i + 1], env))
-        for (var i = 0, last = undefined; i < pair.length; i += 2)
-            last = env(pair[i], pair[i + 1])
-        return applyKont(kont, last)
-    },
-    // set v1 a1 v2 a2 ...
-    'set-ext': function(exp, env, kont) {
-        for (var i = 1, pair = [ ]; i < exp.length; i += 2)
-            pair.push(exp[i], value(exp[i + 1], env))
-        for (var i = 0, last = undefined; i < pair.length; i += 2)
-            last = env(pair[i], pair[i + 1], true)
-        return applyKont(kont, last)
-    },
     // if a e1 e2
     'if': function(exp, env, kont) {
         return [value(exp[1], env) ? exp[2] : exp[3], env, kont]
+    },
+    // set v1 a1 v2 a2 ...
+    'set-local': function(exp, env, kont) {
+        return applySet(exp, env, kont, false)
+    },
+    // set v1 a1 v2 a2 ...
+    'set-env': function(exp, env, kont) {
+        return applySet(exp, env, kont, true)
     },
     // if a e1 e2
     'begin': function(exp, env, kont) {
@@ -162,19 +172,10 @@ var stepStmts = {
     },
     // name-arg name arg
     'named-arg': function(exp, env, kont) {
-        return applyKont(kont, ['name=arg', value(exp[1], env), value(exp[2], env)])
-    },
-    // apply obj method args
-    'apply-args': function(exp, env, kont) {
-        return applyProc(value(exp[1], env), value(exp[2], env), value(exp[3], env), kont)
-    },
-    // apply-method obj method a a ...
-    'apply-method': function(exp, env, kont) {
-        var args = exp.slice(3).map(a => value(a, env))
-        return applyProc(value(exp[1], env), value(exp[2], env), args, kont)
+        return applyKont(kont, namedArg(value(exp[1], env), value(exp[2], env)))
     },
     // fn a a ...
-    'apply-function': function(exp, env, kont) {
+    'apply': function(exp, env, kont) {
         var args = exp.slice(1).map(a => value(a, env))
         return applyProc(env('self'), value(exp[0], env), args, kont)
     },
@@ -194,7 +195,7 @@ function anf(exp) {
     if (!Array.isArray(exp))
         return exp
 
-    var func = anfRules[ exp[0] ] || anfRules['apply-function'],
+    var func = anfRules[ exp[0] ] || anfRules.apply,
         wrapper = [ ]
 
     exp = func(exp, function(exp) {
@@ -222,8 +223,8 @@ var anfRules = {
         return exp
     },
     // [set v1 [...] v2 [...]] -> [let #0 [set v1 v1 v2 v2]
-    //                                    [let #1 [...] [let #2 [...] [set-ext v1 #1 v2 #2]]]]
-    'set': function(exp, wrap) {
+    //                                    [let #1 [...] [let #2 [...] [set-env v1 #1 v2 #2]]]]
+    'set-local': function(exp, wrap) {
         var syms = { }, needsWrap = false
         for (var i = 2; i < exp.length; i += 2) {
             if (Array.isArray(exp[i]))
@@ -232,12 +233,12 @@ var anfRules = {
         if (needsWrap) {
             wrap(exp.map((e, i) => syms[i] ? exp[i - 1] : e))
             exp = exp.map((e, i) => syms[i] ? wrap(e) : e)
-            exp[0] = 'set-ext'
+            exp[0] = 'set-env'
         }
         return exp
     },
-    // [set-ext v1 [...] v2 [...]] -> [let #1 [...] [let #2 [...] [set-ext v1 #1 v2 #2]]]
-    'set-ext': function(exp, wrap) {
+    // [set-env v1 [...] v2 [...]] -> [let #1 [...] [let #2 [...] [set-env v1 #1 v2 #2]]]
+    'set-env': function(exp, wrap) {
         for (var i = 2; i < exp.length; i += 2)
             if (Array.isArray(exp[i]))
                 exp[i] = wrap(exp[i])
@@ -250,7 +251,7 @@ var anfRules = {
         return exp
     },
     // [c c1] -> [let #1 c [let #2 c1 [#1 #2]]]
-    'apply-function': function(exp, wrap) {
+    'apply': function(exp, wrap) {
         if (Array.isArray(exp[0]))
             exp[0] = wrap(exp[0])
         // all the arguments must be wrapped because they may change when evaluating

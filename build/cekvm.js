@@ -52,7 +52,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
     }
 
     function value(exp, env) {
-        if (typeof exp === 'string') return exp.substr(0, 1) === '"' ? exp.substr(1) : env(exp);else return exp;
+        if (typeof exp === 'string') return env(exp);else if (exp && exp.yallsString !== undefined) return exp.yallsString;else return exp;
     }
 
     function closure(lambda, parent) {
@@ -72,12 +72,18 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         return con;
     }
 
+    function _namedArg(name, value) {
+        return { name: name, value: value, isNamedArg: true };
+    }
+
     function applyProc(self, proc, paras, kont) {
         var args = [],
             arga = {};
         paras && paras.forEach(function (e) {
-            if (Array.isArray(e) && e[0] === 'name=arg') arga[e[1]] = e[2];else args.push(e);
+            if (e && e.isNamedArg) arga[e.name] = e.value;else args.push(e);
         });
+        if (arga['@self']) self = arga['@self'];
+        if (arga['@args']) args = arga['@args'];
 
         if (proc && proc.yallsClosure) {
             var _proc$yallsClosure = proc.yallsClosure;
@@ -112,10 +118,16 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         }
     }
 
+    function applySet(exp, env, kont, setParent) {
+        for (var i = 1, pair = []; i < exp.length; i += 2) pair.push(exp[i], value(exp[i + 1], env));
+        for (var i = 0, last = undefined; i < pair.length; i += 2) last = env(pair[i], pair[i + 1], setParent);
+        return applyKont(kont, last);
+    }
+
     function step(exp, env, kont) {
         if (!(exp && exp.isStatement)) return applyKont(kont, value(exp, env));
 
-        var func = stepStmts[exp[0]] || stepStmts['apply-function'];
+        var func = stepStmts[exp[0]] || stepStmts.apply;
         return func(exp, env, kont);
     }
 
@@ -128,21 +140,17 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         'let': function _let(exp, env, kont) {
             return [exp[2], env, [exp[1], exp[3], env, kont]];
         },
-        // set v1 a1 v2 a2 ...
-        'set': function set(exp, env, kont) {
-            for (var i = 1, pair = []; i < exp.length; i += 2) pair.push(exp[i], value(exp[i + 1], env));
-            for (var i = 0, last = undefined; i < pair.length; i += 2) last = env(pair[i], pair[i + 1]);
-            return applyKont(kont, last);
-        },
-        // set v1 a1 v2 a2 ...
-        'set-ext': function setExt(exp, env, kont) {
-            for (var i = 1, pair = []; i < exp.length; i += 2) pair.push(exp[i], value(exp[i + 1], env));
-            for (var i = 0, last = undefined; i < pair.length; i += 2) last = env(pair[i], pair[i + 1], true);
-            return applyKont(kont, last);
-        },
         // if a e1 e2
         'if': function _if(exp, env, kont) {
             return [value(exp[1], env) ? exp[2] : exp[3], env, kont];
+        },
+        // set v1 a1 v2 a2 ...
+        'set-local': function setLocal(exp, env, kont) {
+            return applySet(exp, env, kont, false);
+        },
+        // set v1 a1 v2 a2 ...
+        'set-env': function setEnv(exp, env, kont) {
+            return applySet(exp, env, kont, true);
         },
         // if a e1 e2
         'begin': function begin(exp, env, kont) {
@@ -154,21 +162,10 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         },
         // name-arg name arg
         'named-arg': function namedArg(exp, env, kont) {
-            return applyKont(kont, ['name=arg', value(exp[1], env), value(exp[2], env)]);
-        },
-        // apply obj method args
-        'apply-args': function applyArgs(exp, env, kont) {
-            return applyProc(value(exp[1], env), value(exp[2], env), value(exp[3], env), kont);
-        },
-        // apply-method obj method a a ...
-        'apply-method': function applyMethod(exp, env, kont) {
-            var args = exp.slice(3).map(function (a) {
-                return value(a, env);
-            });
-            return applyProc(value(exp[1], env), value(exp[2], env), args, kont);
+            return applyKont(kont, _namedArg(value(exp[1], env), value(exp[2], env)));
         },
         // fn a a ...
-        'apply-function': function applyFunction(exp, env, kont) {
+        'apply': function apply(exp, env, kont) {
             var args = exp.slice(1).map(function (a) {
                 return value(a, env);
             });
@@ -188,7 +185,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
     function anf(exp) {
         if (!Array.isArray(exp)) return exp;
 
-        var func = anfRules[exp[0]] || anfRules['apply-function'],
+        var func = anfRules[exp[0]] || anfRules.apply,
             wrapper = [];
 
         exp = func(exp, function (exp) {
@@ -216,8 +213,8 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
             return exp;
         },
         // [set v1 [...] v2 [...]] -> [let #0 [set v1 v1 v2 v2]
-        //                                    [let #1 [...] [let #2 [...] [set-ext v1 #1 v2 #2]]]]
-        'set': function set(exp, wrap) {
+        //                                    [let #1 [...] [let #2 [...] [set-env v1 #1 v2 #2]]]]
+        'set-local': function setLocal(exp, wrap) {
             var syms = {},
                 needsWrap = false;
             for (var i = 2; i < exp.length; i += 2) {
@@ -230,12 +227,12 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
                 exp = exp.map(function (e, i) {
                     return syms[i] ? wrap(e) : e;
                 });
-                exp[0] = 'set-ext';
+                exp[0] = 'set-env';
             }
             return exp;
         },
-        // [set-ext v1 [...] v2 [...]] -> [let #1 [...] [let #2 [...] [set-ext v1 #1 v2 #2]]]
-        'set-ext': function setExt(exp, wrap) {
+        // [set-env v1 [...] v2 [...]] -> [let #1 [...] [let #2 [...] [set-env v1 #1 v2 #2]]]
+        'set-env': function setEnv(exp, wrap) {
             for (var i = 2; i < exp.length; i += 2) if (Array.isArray(exp[i])) exp[i] = wrap(exp[i]);
             return exp;
         },
@@ -245,7 +242,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
             return exp;
         },
         // [c c1] -> [let #1 c [let #2 c1 [#1 #2]]]
-        'apply-function': function applyFunction(exp, wrap) {
+        'apply': function apply(exp, wrap) {
             if (Array.isArray(exp[0])) exp[0] = wrap(exp[0]);
             // all the arguments must be wrapped because they may change when evaluating
             for (var i = 1; i < exp.length; i++) if (Array.isArray(exp[i]) || typeof exp[i] === 'string') exp[i] = wrap(exp[i]);
