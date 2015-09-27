@@ -82,8 +82,14 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         paras && paras.forEach(function (e) {
             if (e && e.isNamedArg) arga[e.name] = e.value;else args.push(e);
         });
-        if (arga['@self']) self = arga['@self'];
-        if (arga['@args']) args = arga['@args'];
+        if (arga['@self']) {
+            self = arga['@self'];
+            delete arga['@self'];
+        }
+        if (arga['@args']) {
+            args = arga['@args'];
+            delete arga['@args'];
+        }
 
         if (proc && proc.yallsClosure) {
             var _proc$yallsClosure = proc.yallsClosure;

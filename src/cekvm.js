@@ -91,10 +91,14 @@ function applyProc(self, proc, paras, kont) {
         else
             args.push(e)
     })
-    if (arga['@self'])
+    if (arga['@self']) {
         self = arga['@self']
-    if (arga['@args'])
+        delete arga['@self']
+    }
+    if (arga['@args']) {
         args = arga['@args']
+        delete arga['@args']
+    }
 
     if (proc && proc.yallsClosure) {
         var { lambda, parent } = proc.yallsClosure,

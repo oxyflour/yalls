@@ -45,8 +45,8 @@ echo(a, b, c)
 </script>
 <script title="generator with call/cc" id="genLib" type="script/x-lua">
 mkYield = fn(ret)
-	next = fn(cc, value)
-		fn()
+	next = fn(cc)
+		fn(value)
 			callcc(fn(rcc)
 				ret := rcc
 				cc(value)
@@ -55,7 +55,7 @@ mkYield = fn(ret)
 	end
 	fn(value)
 		callcc(fn(cc)
-			ret({ next = next(cc, value), value })
+			ret({ next = next(cc), value })
 		end)
 	end
 end
@@ -67,8 +67,8 @@ mkGenerator = fn(iter)
 			iter(yield)
 		end)
 	end
-	fn()
-		ret = next and next()
+	fn(value)
+		ret = next and next(value)
 		if ret then
 			next := ret.next
 			ret.value
@@ -141,12 +141,28 @@ doAsync(fn(yield, next)
 	yield(timeout(next, 1000))
 	echo(date.now() - start)
 
-	timeout(next, 1000)
-	timeout(next, 2000)
-	yield()
-	yield()
+	for t = [
+		timeout(next, 1000)
+		timeout(next, 1000)
+		timeout(next, 2000)
+	] do
+		yield()
+	end
 	echo(date.now() - start)
 end)
+
+</script>
+<script title="objects methods" type="script/x-lua">
+a = [1, 2, 3]
+echo('a.last() =', a.last())
+echo('a[end] =', a[end])
+
+b = { name = 'b', size = 1 }
+echo('b.keys() =', b.keys())
+echo('b.values() =', b.values())
+
+c = self.new()
+echo('c.keys =', c.keys)
 
 </script>
 <script title="object meta method" type="script/x-lua">

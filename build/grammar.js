@@ -186,7 +186,9 @@
 	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']], ['stmt', ['export', 'exp'], function (_export, e) {
 		return ['set-env', 'export', e];
 	}], ['stmt', ['import', 'idlist', 'from', 'STR'], function (_import, l, _from, s) {
-		return ['import', s, ['array'].concat(l)];
+		return ['import', s, ['array'].concat(l.map(function (i) {
+			return strToken(i.value);
+		}))];
 	}], ['stmt', ['throw', 'exp'], function (t, e) {
 		return [t, e];
 	}], ['stmt', ['fn', 'ID', 'pars', 'block', 'end'], function (_func, i, p, b, _end) {
@@ -218,7 +220,7 @@
 	}], ['primary', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
 		return ['.', p, e];
 	}], ['primary', ['primary', '[', 'end', ']'], function (p, _l, e, _r) {
-		return ['array-last', p];
+		return applyExp(p, strToken('last'));
 	}], ['primary', ['primary', '.', 'ID'], function (p, _d, i) {
 		return ['.', p, strToken(i.value)];
 	}], ['primary', ['do', 'block', 'end'], function (_do, b, _end) {
@@ -293,7 +295,7 @@
 
 	// for iterator
 	['iterator', ['exp'], function (e) {
-		return e[0] === 'dict' ? ['pair', e] : e[0] === 'array' ? ['ipair', e] : e;
+		return ['iterator', e];
 	}], ['iterator', ['exp', ',', 'exp'], function (e1, _c, e2) {
 		return ['range', e1, e2];
 	}], ['iterator', ['exp', ',', 'exp', ',', 'exp'], function (e1, _c, e2, _c2, e3) {
@@ -315,8 +317,14 @@
 	// array constructor
 	['arrayconst', ['[', ']'], function (t) {
 		return ['array'];
-	}], ['arrayconst', ['[', 'explist', ']'], function (_l, e, _r) {
+	}], ['arrayconst', ['[', 'cellist', ']'], function (_l, e, _r) {
 		return ['array'].concat(e);
+	}], ['arrayconst', ['[', 'cellist', 'fieldsep', ']'], function (_l, e, _r) {
+		return ['array'].concat(e);
+	}], ['cellist', ['exp'], function (f) {
+		return [f];
+	}], ['cellist', ['cellist', 'fieldsep', 'exp'], function (l, _c, f) {
+		return l.concat([f]);
 	}],
 
 	// table constructor

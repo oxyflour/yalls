@@ -10,7 +10,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			obj = obj || {};
 			for (var k in f.arga) obj[k] = f.arga[k];
 
-			obj['..'] = this;
+			obj['@proto'] = this;
 			obj['@'] = obj['@'] || this['@'] || self['@'];
 
 			return obj;
@@ -20,10 +20,40 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			if (arguments.length > 1) return this[prop] = value;
 
 			var obj = this;
-			while (obj && obj[prop] === undefined) obj = obj['..'];
+			while (obj && obj[prop] === undefined) obj = obj['@proto'];
 
 			// may throw 'prop not found'
 			return obj && obj[prop];
+		}
+
+	};
+
+	var arrayProto = {
+
+		'@proto': self,
+
+		'last': function last() {
+			return this[this.length - 1];
+		}
+
+	};
+
+	var dictProto = {
+
+		'@proto': self,
+
+		'keys': function keys() {
+			return Object.keys(this).filter(function (k) {
+				return k[0] !== '@';
+			});
+		},
+
+		'values': function values() {
+			var _this = this;
+
+			return dictProto.keys.call(this).map(function (k) {
+				return _this[k];
+			});
 		}
 
 	};
@@ -114,7 +144,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 		},
 
 		'pair': function pair(object) {
-			var keys = Object.keys(object);
+			var keys = dictProto.keys.call(object);
 			return function (v, k, i) {
 				i = i === undefined ? 0 : i + 1;
 				if (i >= 0 && i < keys.length) {
@@ -134,17 +164,16 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 		},
 
 		'array': function array() {
-			return Array.prototype.slice.call(arguments);
-		},
-
-		'array-last': function arrayLast(a) {
-			return a[a.length - 1];
+			var array = Array.prototype.slice.call(arguments);
+			array['@proto'] = arrayProto;
+			return array;
 		},
 
 		'dict': function dict() {
-			var data = {};
-			for (var i = 0; i < arguments.length - 1; i += 2) data[arguments[i]] = arguments[i + 1];
-			return data;
+			var dict = {};
+			for (var i = 0; i < arguments.length - 1; i += 2) dict[arguments[i]] = arguments[i + 1];
+			dict['@proto'] = dictProto;
+			return dict;
 		},
 
 		'self': self,

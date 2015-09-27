@@ -7,7 +7,7 @@ var self = {
 		for (var k in f.arga)
 			obj[k] = f.arga[k]
 
-		obj['..'] = this
+		obj['@proto'] = this
 		obj['@'] = obj['@'] || this['@'] || self['@']
 
 		return obj
@@ -19,10 +19,34 @@ var self = {
 
 		var obj = this
 		while (obj && obj[prop] === undefined)
-			obj = obj['..']
+			obj = obj['@proto']
 
 		// may throw 'prop not found'
 		return obj && obj[prop]
+	},
+
+}
+
+var arrayProto = {
+
+	'@proto': self,
+
+	'last': function() {
+		return this[this.length - 1]
+	},
+
+}
+
+var dictProto = {
+
+	'@proto': self,
+
+	'keys': function() {
+		return Object.keys(this).filter(k => k[0] !== '@')
+	},
+
+	'values': function() {
+		return dictProto.keys.call(this).map(k => this[k])
 	},
 
 }
@@ -84,7 +108,7 @@ var prelude = {
 	},
 
 	'pair': function(object) {
-		var keys = Object.keys(object)
+		var keys = dictProto.keys.call(object)
 		return (v, k, i) => {
 			i = i === undefined ? 0 : i + 1
 			if (i >= 0 && i < keys.length) {
@@ -104,18 +128,17 @@ var prelude = {
 	},
 
 	'array': function() {
-		return Array.prototype.slice.call(arguments)
-	},
-
-	'array-last': function(a) {
-		return a[a.length - 1]
+		var array = Array.prototype.slice.call(arguments)
+		array['@proto'] = arrayProto
+		return array
 	},
 
 	'dict': function() {
-		var data = { }
+		var dict = { }
 		for (var i = 0; i < arguments.length - 1; i += 2)
-			data[arguments[i]] = arguments[i + 1]
-		return data
+			dict[arguments[i]] = arguments[i + 1]
+		dict['@proto'] = dictProto
+		return dict
 	},
 
 	'self': self,

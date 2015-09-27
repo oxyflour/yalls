@@ -254,7 +254,7 @@ var grammars = [
 	['stmt', ['export', 'exp'],
 		(_export, e) => ['set-env', 'export', e]],
 	['stmt', ['import', 'idlist', 'from', 'STR'],
-		(_import, l, _from, s) => ['import', s, ['array'].concat(l)]],
+		(_import, l, _from, s) => ['import', s, ['array'].concat(l.map(i => strToken(i.value)))]],
 	['stmt', ['throw', 'exp'],
 		(t, e) => [t, e]],
 	['stmt', ['fn', 'ID', 'pars', 'block', 'end'],
@@ -295,7 +295,7 @@ var grammars = [
 	['primary', ['primary', '[', 'exp', ']'],
 		(p, _l, e, _r) => ['.', p, e]],
 	['primary', ['primary', '[', 'end', ']'],
-		(p, _l, e, _r) => ['array-last', p]],
+		(p, _l, e, _r) => applyExp(p, strToken('last'))],
 	['primary', ['primary', '.', 'ID'],
 		(p, _d, i) => ['.', p, strToken(i.value)]],
 	['primary', ['do', 'block', 'end'],
@@ -373,7 +373,7 @@ var grammars = [
 
 	// for iterator
 	['iterator', ['exp'],
-		(e) => e[0] === 'dict' ? ['pair', e] : (e[0] === 'array' ? ['ipair', e] : e)],
+		(e) => ['iterator', e]],
 	['iterator', ['exp', ',', 'exp'],
 		(e1, _c, e2) => ['range', e1, e2]],
 	['iterator', ['exp', ',', 'exp', ',', 'exp'],
@@ -399,8 +399,15 @@ var grammars = [
 	// array constructor
 	['arrayconst', ['[', ']'],
 		(t) => ['array']],
-	['arrayconst', ['[', 'explist', ']'],
+	['arrayconst', ['[', 'cellist', ']'],
 		(_l, e, _r) => ['array'].concat(e)],
+	['arrayconst', ['[', 'cellist', 'fieldsep', ']'],
+		(_l, e, _r) => ['array'].concat(e)],
+
+	['cellist', ['exp'],
+		(f) => [f]],
+	['cellist', ['cellist', 'fieldsep', 'exp'],
+		(l, _c, f) => l.concat([f])],
 
 	// table constructor
 	['tableconst', ['{', '}'],
