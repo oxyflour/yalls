@@ -10,10 +10,8 @@ var self = {
 
 		var hooks = { }, hasHook = false
 		for (var k in f.arga) {
-			if (k[0] === '@') {
-				hooks[k] = f.arga[k]
-				hasHook = k !== '@'
-			}
+			if (k[0] === '@' && k !== '@')
+				hasHook = hooks[k] = f.arga[k]
 			else
 				obj[k] = f.arga[k]
 		}
