@@ -199,8 +199,8 @@
 		return mutExp(o, v, e);
 	}], ['exp', ['ID', '=>', 'exp'], function (p, _a, b) {
 		return ['lambda'].concat(p).concat([b]);
-	}], ['exp', ['(', 'ID', ',', 'idlist', ')', '=>', 'exp'], function (_l, i, _c, p, _r, _a, b) {
-		return ['lambda', i].concat(p).concat([b]);
+	}], ['exp', ['(', 'idlist', ')', '=>', 'exp'], function (_l, p, _r, _a, b) {
+		return ['lambda'].concat(p).concat([b]);
 	}], ['cprim', ['sprim']], ['cprim', ['NOT', 'cprim'], function (o, e) {
 		return [o, e];
 	}], ['cprim', ['cprim', 'AND', 'cprim'], function (e1, o, e2) {
@@ -350,7 +350,9 @@
 		MUL: [13, 'left'],
 		ADD: [12, 'left'],
 		CMP: [11, 'left'],
-		AND: [10, 'left']
+		AND: [10, 'left'],
+		// to resolve idlist -> ID v.s. variable -> ID
+		')': [-1, 'left']
 	};
 
 	var yajily = typeof window !== 'undefined' ? window.yajily : require('../../yajily');

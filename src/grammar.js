@@ -267,8 +267,8 @@ var grammars = [
 		(v, o, e) => mutExp(o, v, e)],
 	['exp', ['ID', '=>', 'exp'],
 		(p, _a, b) => ['lambda'].concat(p).concat([b])],
-	['exp', ['(', 'ID', ',', 'idlist', ')', '=>', 'exp'],
-		(_l, i, _c, p, _r, _a, b) => ['lambda', i].concat(p).concat([b])],
+	['exp', ['(', 'idlist', ')', '=>', 'exp'],
+		(_l, p, _r, _a, b) => ['lambda'].concat(p).concat([b])],
 
 	['cprim', ['sprim']],
 	['cprim', ['NOT', 'cprim'],
@@ -447,6 +447,8 @@ var precedence = {
 	ADD: [12, 'left'],
 	CMP: [11, 'left'],
 	AND: [10, 'left'],
+	// to resolve idlist -> ID v.s. variable -> ID
+	')': [-1, 'left'],
 }
 
 var yajily = typeof(window) !== 'undefined' ? window.yajily : require('../../yajily')
