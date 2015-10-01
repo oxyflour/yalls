@@ -220,7 +220,7 @@ function andExp(operator, exp1, exp2) {
 }
 
 // [: obj methodName arg ...] -> [let # obj [: # [. # methodName] arg ...]]
-function applyExp(object, methodName, args) {
+function callMethodExp(object, methodName, args) {
     var sym = symbol(), fn = ['.', sym, methodName]
     return ['let', sym, object, [fn, ['named-arg', strToken('@self'), sym]].concat(args)]
 }
@@ -284,20 +284,11 @@ var grammars = [
 	['sexp', ['ADD', 'primary'],
 		(a, p) => [a, 0, p]],
 
-	['primary', ['ID']],
-	['primary', ['local']],
+	['primary', ['variable']],
 	['primary', ['cstr']],
 	['primary', ['literal']],
-	['primary', ['local', 'ID'],
-		(_l, i) => ['.', 'local', i]],
 	['primary', ['(', 'exp', ')'],
 		(_l, c, _r) => c],
-	['primary', ['primary', '[', 'exp', ']'],
-		(p, _l, e, _r) => ['.', p, e]],
-	['primary', ['primary', '[', 'end', ']'],
-		(p, _l, e, _r) => applyExp(p, strToken('last'))],
-	['primary', ['primary', '.', 'ID'],
-		(p, _d, i) => ['.', p, strToken(i.value)]],
 	['primary', ['do', 'block', 'end'],
 		(_do, b, _end) => letExp([ ], b)],
 	['primary', ['let', 'binds', 'do', 'block', 'end'],
@@ -309,7 +300,7 @@ var grammars = [
 	['primary', ['while', 'exp', 'do', 'block', 'end'],
 		(_while, e, _do, b, _end) => whileExp(e, b)],
 	['primary', ['primary', 'args'],
-		(f, a) => f[0] === '.' ? applyExp(f[1], f[2], a) : [f].concat(a)],
+		(f, a) => f[0] === '.' ? callMethodExp(f[1], f[2], a) : [f].concat(a)],
 	['primary', ['fn', 'pars', 'block', 'end'],
 		(_func, p, b, _end) => ['lambda'].concat(p).concat([b])],
 	['primary', ['{', '|', 'idlist', '|', 'block', '}'],
@@ -321,7 +312,7 @@ var grammars = [
 		(c, s) => ['+', c, s]],
 	['pstr', ['BSTR', 'exp'],
 		(b, e) => ['+', strToken(b.value), e]],
-	['pstr', ['cstr1', 'BSTR', 'exp'],
+	['pstr', ['pstr', 'BSTR', 'exp'],
 		(c, b, e) => ['+', ['+', c, strToken(b.value)], e]],
 
 	['idlist', ['ID'],
@@ -335,6 +326,9 @@ var grammars = [
 		(l, _c, e) => l.concat([e])],
 
 	['variable', ['ID']],
+	['variable', ['local']],
+	['variable', ['local', 'ID'],
+		(_l, i) => ['.', 'local', i]],
 	['variable', ['primary', '[', 'exp', ']'],
 		(p, _l, e, _r) => ['.', p, e]],
 	['variable', ['primary', '.', 'ID'],

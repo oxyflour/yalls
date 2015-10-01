@@ -2,7 +2,7 @@
 
 var self = {
 
-	'new': function f(obj) {
+	'extend': function f(obj) {
 		obj = obj || { }
 
 		obj['@proto'] = this
@@ -10,20 +10,16 @@ var self = {
 
 		var hooks = { }, hasHook = false
 		for (var k in f.arga) {
-			if (k[0] === '@')
-				hasHook = hooks[k] = f.arga[k]
+			if (k[0] === '@') {
+				hooks[k] = f.arga[k]
+				hasHook = k !== '@'
+			}
 			else
 				obj[k] = f.arga[k]
 		}
 
-		if (hasHook) {
-			var lookup = obj['@']
-			obj['@'] = function(prop, value) {
-				var action = arguments.length > 1 ? '@set' : '@get',
-					propAction = action + '@' + prop
-				return (hooks[propAction] || hooks[action] || lookup).apply(this, arguments)
-			}
-		}
+		if (hasHook)
+			obj['@'] = prelude.hook.apply2(this, [obj['@']], hooks)
 
 		return obj
 	},
@@ -161,6 +157,15 @@ var prelude = {
 			args = Array.prototype.slice.call(arguments).slice(1)
 		return fn.apply2(obj, args, f.arga)
 	},
+
+	'hook': function f(lookup) {
+		var hooks = f.arga
+		return function(prop, value) {
+			var action = arguments.length > 1 ? '@set' : '@get',
+				propAction = action + '@' + prop
+			return (hooks[propAction] || hooks[action] || lookup).apply(this, arguments)
+		}
+	}
 
 }
 

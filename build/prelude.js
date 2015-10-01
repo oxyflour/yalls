@@ -18,14 +18,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 				if (k[0] === '@') hasHook = hooks[k] = f.arga[k];else obj[k] = f.arga[k];
 			}
 
-			if (hasHook) {
-				var lookup = obj['@'];
-				obj['@'] = function (prop, value) {
-					var action = arguments.length > 1 ? '@set' : '@get',
-					    propAction = action + '@' + prop;
-					return (hooks[propAction] || hooks[action] || lookup).apply(this, arguments);
-				};
-			}
+			if (hasHook) obj['@'] = prelude.hook.apply2(this, [obj['@']], hooks);
 
 			return obj;
 		},
@@ -194,6 +187,15 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			var fn = obj['@'] || self['@'],
 			    args = Array.prototype.slice.call(arguments).slice(1);
 			return fn.apply2(obj, args, f.arga);
+		},
+
+		'hook': function f(lookup) {
+			var hooks = f.arga;
+			return function (prop, value) {
+				var action = arguments.length > 1 ? '@set' : '@get',
+				    propAction = action + '@' + prop;
+				return (hooks[propAction] || hooks[action] || lookup).apply(this, arguments);
+			};
 		}
 
 	};

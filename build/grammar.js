@@ -167,7 +167,7 @@
 	}
 
 	// [: obj methodName arg ...] -> [let # obj [: # [. # methodName] arg ...]]
-	function applyExp(object, methodName, args) {
+	function callMethodExp(object, methodName, args) {
 		var sym = symbol(),
 		    fn = ['.', sym, methodName];
 		return ['let', sym, object, [fn, ['named-arg', strToken('@self'), sym]].concat(args)];
@@ -213,16 +213,8 @@
 		return [o, e1, e2];
 	}], ['sexp', ['primary']], ['sexp', ['ADD', 'primary'], function (a, p) {
 		return [a, 0, p];
-	}], ['primary', ['ID']], ['primary', ['local']], ['primary', ['cstr']], ['primary', ['literal']], ['primary', ['local', 'ID'], function (_l, i) {
-		return ['.', 'local', i];
-	}], ['primary', ['(', 'exp', ')'], function (_l, c, _r) {
+	}], ['primary', ['variable']], ['primary', ['cstr']], ['primary', ['literal']], ['primary', ['(', 'exp', ')'], function (_l, c, _r) {
 		return c;
-	}], ['primary', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
-		return ['.', p, e];
-	}], ['primary', ['primary', '[', 'end', ']'], function (p, _l, e, _r) {
-		return applyExp(p, strToken('last'));
-	}], ['primary', ['primary', '.', 'ID'], function (p, _d, i) {
-		return ['.', p, strToken(i.value)];
 	}], ['primary', ['do', 'block', 'end'], function (_do, b, _end) {
 		return letExp([], b);
 	}], ['primary', ['let', 'binds', 'do', 'block', 'end'], function (_let, l, _do, b, _end) {
@@ -234,18 +226,18 @@
 	}], ['primary', ['while', 'exp', 'do', 'block', 'end'], function (_while, e, _do, b, _end) {
 		return whileExp(e, b);
 	}], ['primary', ['primary', 'args'], function (f, a) {
-		return f[0] === '.' ? applyExp(f[1], f[2], a) : [f].concat(a);
+		return f[0] === '.' ? callMethodExp(f[1], f[2], a) : [f].concat(a);
 	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_func, p, b, _end) {
 		return ['lambda'].concat(p).concat([b]);
 	}], ['primary', ['{', '|', 'idlist', '|', 'block', '}'], function (_l, _s, p, _d, b, _end) {
 		return ['lambda'].concat(p).concat([b]);
 	}], ['primary', ['try', 'block', 'catch', 'ID', 'do', 'block', 'end'], function (_try, b, _catch, i, _do, d, _end) {
 		return ['try', b, i, d];
-	}], ['cstr', ['cstr1', 'STR'], function (c, s) {
+	}], ['cstr', ['pstr', 'STR'], function (c, s) {
 		return ['+', c, s];
-	}], ['cstr1', ['BSTR', 'exp'], function (b, e) {
+	}], ['pstr', ['BSTR', 'exp'], function (b, e) {
 		return ['+', strToken(b.value), e];
-	}], ['cstr1', ['cstr1', 'BSTR', 'exp'], function (c, b, e) {
+	}], ['pstr', ['pstr', 'BSTR', 'exp'], function (c, b, e) {
 		return ['+', ['+', c, strToken(b.value)], e];
 	}], ['idlist', ['ID'], function (v) {
 		return [v];
@@ -255,7 +247,9 @@
 		return [e];
 	}], ['explist', ['explist', ',', 'exp'], function (l, _c, e) {
 		return l.concat([e]);
-	}], ['variable', ['ID']], ['variable', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
+	}], ['variable', ['ID']], ['variable', ['local']], ['variable', ['local', 'ID'], function (_l, i) {
+		return ['.', 'local', i];
+	}], ['variable', ['primary', '[', 'exp', ']'], function (p, _l, e, _r) {
 		return ['.', p, e];
 	}], ['variable', ['primary', '.', 'ID'], function (p, _dot, i) {
 		return ['.', p, strToken(i.value)];
@@ -263,11 +257,11 @@
 		return [v];
 	}], ['varlist', ['varlist', ',', 'variable'], function (l, _c, v) {
 		return l.concat(v);
+	}], ['binds', ['bindlist']], ['binds', ['bindlist', 'fieldsep']], ['bindlist', ['bind']], ['bindlist', ['bindlist', 'fieldsep', 'bind'], function (l, _sep, b) {
+		return l.concat(b);
 	}], ['bind', ['ID', '=', 'exp'], function (i, _eq, e) {
 		return [i, e];
-	}], ['bindlist', ['bind']], ['bindlist', ['bindlist', 'fieldsep', 'bind'], function (l, _sep, b) {
-		return l.concat(b);
-	}], ['binds', ['bindlist']], ['binds', ['bindlist', 'fieldsep']],
+	}],
 
 	// parameters
 	['pars', ['(', ')'], function (d) {

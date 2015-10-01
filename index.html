@@ -32,7 +32,7 @@ amb = fn()
 end
 
 assert = fn(condition)
-	condition or failStack[end]()
+	condition or failStack[failStack.length - 1]()
 end
 
 a = amb(1, 2, 3, 4, 5, 6, 7)
@@ -161,18 +161,20 @@ end)
 <script title="array/dict" type="script/x-lua">
 a = [1, 2, 3]
 echo('a.last() =', a.last())
-echo('a[end] =', a[end])
+for v, i = a do
+	echo(i, '=>', v)
+end
 
 b = { name = 'b', size = 1 }
 echo('b.keys() =', b.keys())
 echo('b.values() =', b.values())
-
-c = self.new()
-echo('c.keys =', c.keys)
+for v, k = b do
+	echo(k, '=>', v)
+end
 
 </script>
 <script title="object meta method" type="script/x-lua">
-a = self.new(
+a = self.extend(
         name = 'a'
 		say = fn()
 		    echo('my name is ' + self.name)
@@ -180,9 +182,10 @@ a = self.new(
 a.say()
 
 lookup = a['@']
-b = a.new(
+b = a.extend(
 		name = 'b'
 		'@get' = fn(name)
+		    -- do not use self[name] because it will cause a stackoverflow!
 		    lookup.call(self, name) or fn()
 		        echo("[!] this guy ({{ self.name }}) " +
 		        	"cannot {{ name }} ")
@@ -191,15 +194,13 @@ b = a.new(
 b.say()
 b.cry()
 
-</script>
-<script title="attribute getter/setter" type="script/x-lua">
-a = self.new(
-		'@get@name' = fn() 'a' end
-		'@set@name' = fn() echo('name is readonly') end)
+c = self.extend(
+		'@get@name' = fn() 'c' end
+		'@set@name' = fn() echo('[!] name is readonly') end)
 
-echo(a.name)
-a.name = 'b'
-echo(a.name)
+echo('name of c is ', c.name)
+c.name = 'd'
+echo('name of c is ', c.name)
 
 </script>
 <script title="dsl (html)" type="script/x-lua">
@@ -209,7 +210,7 @@ htmlBuilder = fn(env)
 			"{{ k }}:{{ v }}"
 		end).join(';')
 	end
-	env['@'] = fn(name)
+	env['@'] = hook(env['@'], '@get' = fn(name)
 		local[name] or fn()
 			attrs = map(arga, fn(v, k) "{{ k }}=\"{{ v }}\"" end)
 			tag = attrs.length and name + ' ' + attrs.join(' ') or name
@@ -219,7 +220,7 @@ htmlBuilder = fn(env)
 				"<{{ tag }} />"
 			end
 		end
-	end
+	end)
 end
 
 text = do htmlBuilder(local)
