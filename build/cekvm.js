@@ -259,6 +259,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
     }
 
     function run(exp, env, kont) {
+        if (!Array.isArray(exp)) exp = ['begin', exp];
         if (!exp.isStatement) markStmt(exp);
 
         var state = [exp, env, kont];

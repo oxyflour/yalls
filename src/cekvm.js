@@ -278,6 +278,8 @@ function markStmt(exp) {
 }
 
 function run(exp, env, kont) {
+    if (!Array.isArray(exp))
+        exp = ['begin', exp]
     if (!exp.isStatement)
         markStmt(exp)
 

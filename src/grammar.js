@@ -117,7 +117,13 @@ var actions = [
 	[/and|or/,
 		m => token('AND', m)],
 
+	[/\:=|\+=|-=|\*=|\/=|%=/,
+		m => token('MUT', m)],
+
 	[/if|elseif|then|else|let|fn|while|for|do|end|nil|local|try|catch|throw|export|import|from/,
+		m => token(m, m)],
+
+	[/=>|\[|{|\(|\]|}|\)|\.|=|,|\:|\|/,
 		m => token(m, m)],
 
 	[/[a-zA-Z\$_]+\d*\w*/,
@@ -128,12 +134,6 @@ var actions = [
 		m => token('NUM', parseInt(m), m)],
 	[/\d+(?:\.\d+(?:[eE]-?\d+)?)?/,
 		m => token('NUM', parseFloat(m), m)],
-
-	[/\:=|\+=|-=|\*=|\/=|%=/,
-		m => token('MUT', m)],
-
-	[/\[|{|\(|\]|}|\)|\.|=|,|\:|\|/,
-		m => token(m, m)],
 
 	[/\n|;/,
 		m => token('NEWLINE', ';', m)],
@@ -255,31 +255,34 @@ var grammars = [
 		(_export, e) => ['set-env', '@export', e]],
 	['stmt', ['import', 'idlist', 'from', 'STR'],
 		(_import, l, _from, s) => ['import', s, ['array'].concat(l.map(i => strToken(i.value)))]],
-	['stmt', ['throw', 'exp'],
-		(t, e) => [t, e]],
 	['stmt', ['fn', 'ID', 'pars', 'block', 'end'],
 		(_func, i, p, b, _end) => ['set-local', i, ['lambda'].concat(p).concat([b])]],
 	['stmt', ['varlist', '=', 'explist'],
 		(li, _eq, le) => setExp(li, le)],
-	['stmt', ['variable', 'MUT', 'exp'],
+
+	['exp', ['cprim']],
+	['exp', ['throw', 'exp'],
+		(t, e) => [t, e]],
+	['exp', ['variable', 'MUT', 'exp'],
 		(v, o, e) => mutExp(o, v, e)],
+	['exp', ['ID', '=>', 'exp'],
+		(p, _a, b) => ['lambda'].concat(p).concat([b])],
+	['exp', ['(', 'ID', ',', 'idlist', ')', '=>', 'exp'],
+		(_l, i, _c, p, _r, _a, b) => ['lambda', i].concat(p).concat([b])],
 
-	['exp', ['sprim']],
-	['exp', ['NOT', 'exp'],
+	['cprim', ['sprim']],
+	['cprim', ['NOT', 'cprim'],
 		(o, e) => [o, e]],
-	['exp', ['exp', '|', 'exp'],
-		(e1, o, e2) => [e2, e1]],
-	['exp', ['exp', 'AND', 'exp'],
+	['cprim', ['cprim', 'AND', 'cprim'],
 		(e1, o, e2) => andExp(o, e1, e2)],
-	['exp', ['exp', 'CMP', 'exp'],
+	['cprim', ['cprim', 'CMP', 'cprim'],
 		(e1, o, e2) => [o, e1, e2]],
-	['exp', ['exp', 'ADD', 'exp'],
+	['cprim', ['cprim', 'ADD', 'cprim'],
 		(e1, o, e2) => [o, e1, e2]],
-	['exp', ['exp', 'MUL', 'exp'],
+	['cprim', ['cprim', 'MUL', 'cprim'],
 		(e1, o, e2) => [o, e1, e2]],
-	['exp', ['exp', 'POW', 'exp'],
+	['cprim', ['cprim', 'POW', 'cprim'],
 		(e1, o, e2) => [o, e1, e2]],
-
 	['sprim', ['primary']],
 	['sprim', ['ADD', 'primary'],
 		(a, p) => [a, 0, p]],
@@ -303,8 +306,6 @@ var grammars = [
 		(f, a) => f[0] === '.' ? callMethodExp(f[1], f[2], a) : [f].concat(a)],
 	['primary', ['fn', 'pars', 'block', 'end'],
 		(_func, p, b, _end) => ['lambda'].concat(p).concat([b])],
-	['primary', ['{', '|', 'idlist', '|', 'block', '}'],
-		(_l, _s, p, _d, b, _end) => ['lambda'].concat(p).concat([b])],
 	['primary', ['try', 'block', 'catch', 'ID', 'do', 'block', 'end'],
 		(_try, b, _catch, i, _do, d, _end) => ['try', b, i, d]],
 
@@ -446,7 +447,6 @@ var precedence = {
 	ADD: [12, 'left'],
 	CMP: [11, 'left'],
 	AND: [10, 'left'],
-	'|': [ 9, 'left'],
 }
 
 var yajily = typeof(window) !== 'undefined' ? window.yajily : require('../../yajily')

@@ -25,9 +25,7 @@ a:hover {
 failStack = [ ]
 
 amb = fn()
-	callcc(fn(cc)
-		failStack.push(cc)
-	end)
+	callcc(cc => failStack.push(cc))
 	args.length and args.pop() or failStack.pop()
 end
 
@@ -124,11 +122,9 @@ end).appendTo('#result')
 <script title="async control flow" type="script/x-lua">
 import mkGenerator from 'genLib'
 
-doAsync = fn(exec, iter)
-	iter = mkGenerator(fn(yield)
-		exec(yield, iter)
-	end)
-	iter()
+doAsync = fn(exec, next)
+	next = mkGenerator(yield => exec(yield, next))
+	next()
 end
 
 doAsync(fn(yield, next)
@@ -138,27 +134,21 @@ doAsync(fn(yield, next)
 	yield(timeout(next, 1000))
 	echo(now() - start)
 
-	yield(timeout(next, 1000))
-	echo(now() - start)
-
 	for t = [
+		timeout(next,  300)
+		timeout(next,  500)
 		timeout(next, 1000)
-		timeout(next, 1000)
-		timeout(next, 2000)
 	] do
 		yield()
 	end
 	echo(now() - start)
 
-	html = yield($.get('package.json').done(next).fail(next))
-	echo(html.statusText or html)
-
-	html = yield($.get('404').done(next).fail(next))
-	echo(html.statusText or html)
+	json = yield($.get('package.json').done(next).fail(next))
+	echo(json.description or json.statusText)
 end)
 
 </script>
-<script title="array/dict" type="script/x-lua">
+<script title="enhanced array/dict" type="script/x-lua">
 a = [1, 2, 3]
 echo('a.last() =', a.last())
 for v, i = a do
@@ -176,9 +166,7 @@ end
 <script title="object meta method" type="script/x-lua">
 a = self.extend(
         name = 'a'
-		say = fn()
-		    echo('my name is ' + self.name)
-		end)
+		say = x => echo('my name is ' + self.name))
 a.say()
 
 lookup = a['@']
@@ -195,8 +183,8 @@ b.say()
 b.cry()
 
 c = self.extend(
-		'@get@name' = fn() 'c' end
-		'@set@name' = fn() echo('[!] name is readonly') end)
+		'@get@name' = x => 'c'
+		'@set@name' = x => echo('[!] name is readonly'))
 
 echo('name of c is ', c.name)
 c.name = 'd'
@@ -206,14 +194,12 @@ echo('name of c is still ', c.name)
 <script title="dsl (html)" type="script/x-lua">
 htmlBuilder = fn(env)
 	css = fn()
-		map(arga, fn(v, k)
-			"{{ k }}:{{ v }}"
-		end).join(';')
+		map(arga, (v, k) => "{{ k }}:{{ v }}").join(';')
 	end
 	env['@'] = hook(env['@'], '@get' = fn(name)
 		local[name] or fn()
-			attrs = map(arga, fn(v, k) "{{ k }}=\"{{ v }}\"" end)
-			tag = attrs.length and name + ' ' + attrs.join(' ') or name
+			attrs = map(arga, (v, k) => "{{ k }}=\"{{ v }}\"").join(' ')
+			tag = attrs and name + ' ' + attrs or name
 			if args.length then
 				"<{{ tag }}>{{ args.join('') }}</{{ name }}>"
 			else
@@ -306,11 +292,13 @@ $('#result').append(text)
 			tree = grammar.parse(input, table),
 			code = evaluate.compile(tree),
 			sandbox = evaluate.environment(null, prelude)
+
+		sandbox('@export', { })
 		evaluate(code, sandbox)
 
-		var exports = sandbox('@export')
+		var exp = sandbox('@export')
 		names.forEach(function(name) {
-			env(name, exports[name])
+			env(name, exp[name])
 		})
 	})
 	env('console', console)

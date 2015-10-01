@@ -95,7 +95,11 @@
 		return token('CMP', m);
 	}], [/and|or/, function (m) {
 		return token('AND', m);
+	}], [/\:=|\+=|-=|\*=|\/=|%=/, function (m) {
+		return token('MUT', m);
 	}], [/if|elseif|then|else|let|fn|while|for|do|end|nil|local|try|catch|throw|export|import|from/, function (m) {
+		return token(m, m);
+	}], [/=>|\[|{|\(|\]|}|\)|\.|=|,|\:|\|/, function (m) {
 		return token(m, m);
 	}], [/[a-zA-Z\$_]+\d*\w*/, function (m) {
 		return token('ID', m);
@@ -106,10 +110,6 @@
 		return token('NUM', parseInt(m), m);
 	}], [/\d+(?:\.\d+(?:[eE]-?\d+)?)?/, function (m) {
 		return token('NUM', parseFloat(m), m);
-	}], [/\:=|\+=|-=|\*=|\/=|%=/, function (m) {
-		return token('MUT', m);
-	}], [/\[|{|\(|\]|}|\)|\.|=|,|\:|\|/, function (m) {
-		return token(m, m);
 	}], [/\n|;/, function (m) {
 		return token('NEWLINE', ';', m);
 	}], [/[\t\r ]+/, function (m) {
@@ -189,27 +189,29 @@
 		return ['import', s, ['array'].concat(l.map(function (i) {
 			return strToken(i.value);
 		}))];
-	}], ['stmt', ['throw', 'exp'], function (t, e) {
-		return [t, e];
 	}], ['stmt', ['fn', 'ID', 'pars', 'block', 'end'], function (_func, i, p, b, _end) {
 		return ['set-local', i, ['lambda'].concat(p).concat([b])];
 	}], ['stmt', ['varlist', '=', 'explist'], function (li, _eq, le) {
 		return setExp(li, le);
-	}], ['stmt', ['variable', 'MUT', 'exp'], function (v, o, e) {
+	}], ['exp', ['cprim']], ['exp', ['throw', 'exp'], function (t, e) {
+		return [t, e];
+	}], ['exp', ['variable', 'MUT', 'exp'], function (v, o, e) {
 		return mutExp(o, v, e);
-	}], ['exp', ['sprim']], ['exp', ['NOT', 'exp'], function (o, e) {
+	}], ['exp', ['ID', '=>', 'exp'], function (p, _a, b) {
+		return ['lambda'].concat(p).concat([b]);
+	}], ['exp', ['(', 'ID', ',', 'idlist', ')', '=>', 'exp'], function (_l, i, _c, p, _r, _a, b) {
+		return ['lambda', i].concat(p).concat([b]);
+	}], ['cprim', ['sprim']], ['cprim', ['NOT', 'cprim'], function (o, e) {
 		return [o, e];
-	}], ['exp', ['exp', '|', 'exp'], function (e1, o, e2) {
-		return [e2, e1];
-	}], ['exp', ['exp', 'AND', 'exp'], function (e1, o, e2) {
+	}], ['cprim', ['cprim', 'AND', 'cprim'], function (e1, o, e2) {
 		return andExp(o, e1, e2);
-	}], ['exp', ['exp', 'CMP', 'exp'], function (e1, o, e2) {
+	}], ['cprim', ['cprim', 'CMP', 'cprim'], function (e1, o, e2) {
 		return [o, e1, e2];
-	}], ['exp', ['exp', 'ADD', 'exp'], function (e1, o, e2) {
+	}], ['cprim', ['cprim', 'ADD', 'cprim'], function (e1, o, e2) {
 		return [o, e1, e2];
-	}], ['exp', ['exp', 'MUL', 'exp'], function (e1, o, e2) {
+	}], ['cprim', ['cprim', 'MUL', 'cprim'], function (e1, o, e2) {
 		return [o, e1, e2];
-	}], ['exp', ['exp', 'POW', 'exp'], function (e1, o, e2) {
+	}], ['cprim', ['cprim', 'POW', 'cprim'], function (e1, o, e2) {
 		return [o, e1, e2];
 	}], ['sprim', ['primary']], ['sprim', ['ADD', 'primary'], function (a, p) {
 		return [a, 0, p];
@@ -228,8 +230,6 @@
 	}], ['primary', ['primary', 'args'], function (f, a) {
 		return f[0] === '.' ? callMethodExp(f[1], f[2], a) : [f].concat(a);
 	}], ['primary', ['fn', 'pars', 'block', 'end'], function (_func, p, b, _end) {
-		return ['lambda'].concat(p).concat([b]);
-	}], ['primary', ['{', '|', 'idlist', '|', 'block', '}'], function (_l, _s, p, _d, b, _end) {
 		return ['lambda'].concat(p).concat([b]);
 	}], ['primary', ['try', 'block', 'catch', 'ID', 'do', 'block', 'end'], function (_try, b, _catch, i, _do, d, _end) {
 		return ['try', b, i, d];
@@ -350,8 +350,7 @@
 		MUL: [13, 'left'],
 		ADD: [12, 'left'],
 		CMP: [11, 'left'],
-		AND: [10, 'left'],
-		'|': [9, 'left']
+		AND: [10, 'left']
 	};
 
 	var yajily = typeof window !== 'undefined' ? window.yajily : require('../../yajily');
