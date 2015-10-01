@@ -133,13 +133,13 @@ end
 
 doAsync(fn(yield, next)
 	echo('starting...')
-	start = date.now()
+	start = now()
 
 	yield(timeout(next, 1000))
-	echo(date.now() - start)
+	echo(now() - start)
 
 	yield(timeout(next, 1000))
-	echo(date.now() - start)
+	echo(now() - start)
 
 	for t = [
 		timeout(next, 1000)
@@ -148,11 +148,17 @@ doAsync(fn(yield, next)
 	] do
 		yield()
 	end
-	echo(date.now() - start)
+	echo(now() - start)
+
+	html = yield($.get('package.json').done(next).fail(next))
+	echo(html.statusText or html)
+
+	html = yield($.get('404').done(next).fail(next))
+	echo(html.statusText or html)
 end)
 
 </script>
-<script title="objects methods" type="script/x-lua">
+<script title="array/dict" type="script/x-lua">
 a = [1, 2, 3]
 echo('a.last() =', a.last())
 echo('a[end] =', a[end])
@@ -166,25 +172,34 @@ echo('c.keys =', c.keys)
 
 </script>
 <script title="object meta method" type="script/x-lua">
-lookup = self['@']
-
 a = self.new(
         name = 'a'
 		say = fn()
 		    echo('my name is ' + self.name)
-		end
-		'@' = fn(name)
+		end)
+a.say()
+
+lookup = a['@']
+b = a.new(
+		name = 'b'
+		'@get' = fn(name)
 		    lookup.call(self, name) or fn()
 		        echo("[!] this guy ({{ self.name }}) " +
 		        	"cannot {{ name }} ")
 		    end
 		end)
-a.say()
-
-b = a.new(name = 'b')
 b.say()
-
 b.cry()
+
+</script>
+<script title="attribute getter/setter" type="script/x-lua">
+a = self.new(
+		'@get@name' = fn() 'a' end
+		'@set@name' = fn() echo('name is readonly') end)
+
+echo(a.name)
+a.name = 'b'
+echo(a.name)
 
 </script>
 <script title="dsl (html)" type="script/x-lua">
@@ -300,16 +315,16 @@ $('#result').append(text)
 	env('import', function f(file, names) {
 		var input = $('#' + file).text(),
 			tree = grammar.parse(input, table),
-			sandbox = evaluate.environment(env)
+			sandbox = evaluate.environment(null, prelude)
 		evaluate(compile(tree), sandbox)
 
-		var exports = sandbox('export')
+		var exports = sandbox('@export')
 		names.forEach(function(name) {
 			env(name, exports[name])
 		})
 	})
 	env('console', console)
-	env('date', Date)
+	env('now', Date.now.bind(Date))
 	env('timeout', setTimeout.bind(window))
 	env('$', $)
 

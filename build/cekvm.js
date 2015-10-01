@@ -82,11 +82,11 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         paras && paras.forEach(function (e) {
             if (e && e.isNamedArg) arga[e.name] = e.value;else args.push(e);
         });
-        if (arga['@self']) {
+        if (arga['@self'] !== undefined) {
             self = arga['@self'];
             delete arga['@self'];
         }
-        if (arga['@args']) {
+        if (arga['@args'] !== undefined) {
             args = arga['@args'];
             delete arga['@args'];
         }

@@ -91,11 +91,11 @@ function applyProc(self, proc, paras, kont) {
         else
             args.push(e)
     })
-    if (arga['@self']) {
+    if (arga['@self'] !== undefined) {
         self = arga['@self']
         delete arga['@self']
     }
-    if (arga['@args']) {
+    if (arga['@args'] !== undefined) {
         args = arga['@args']
         delete arga['@args']
     }

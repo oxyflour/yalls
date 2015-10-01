@@ -222,7 +222,7 @@ function andExp(operator, exp1, exp2) {
 // [: obj methodName arg ...] -> [let # obj [: # [. # methodName] arg ...]]
 function applyExp(object, methodName, args) {
     var sym = symbol(), fn = ['.', sym, methodName]
-    return ['let', sym, object, [fn, ['named-arg', strToken('@self'), sym]].concat(args).concat()]
+    return ['let', sym, object, [fn, ['named-arg', strToken('@self'), sym]].concat(args)]
 }
 
 var grammars = [
@@ -252,7 +252,7 @@ var grammars = [
 
 	['stmt', ['exp']],
 	['stmt', ['export', 'exp'],
-		(_export, e) => ['set-env', 'export', e]],
+		(_export, e) => ['set-env', '@export', e]],
 	['stmt', ['import', 'idlist', 'from', 'STR'],
 		(_import, l, _from, s) => ['import', s, ['array'].concat(l.map(i => strToken(i.value)))]],
 	['stmt', ['throw', 'exp'],
@@ -264,7 +264,7 @@ var grammars = [
 	['stmt', ['variable', 'MUT', 'exp'],
 		(v, o, e) => mutExp(o, v, e)],
 
-	['exp', ['sprimary']],
+	['exp', ['sexp']],
 	['exp', ['NOT', 'exp'],
 		(o, e) => [o, e]],
 	['exp', ['exp', '|', 'exp'],
@@ -280,8 +280,8 @@ var grammars = [
 	['exp', ['exp', 'POW', 'exp'],
 		(e1, o, e2) => [o, e1, e2]],
 
-	['sprimary', ['primary']],
-	['sprimary', ['ADD', 'primary'],
+	['sexp', ['primary']],
+	['sexp', ['ADD', 'primary'],
 		(a, p) => [a, 0, p]],
 
 	['primary', ['ID']],
@@ -300,8 +300,8 @@ var grammars = [
 		(p, _d, i) => ['.', p, strToken(i.value)]],
 	['primary', ['do', 'block', 'end'],
 		(_do, b, _end) => letExp([ ], b)],
-	['primary', ['let', 'fieldlist', 'do', 'block', 'end'],
-		(_let, l, _do, b, _end) => letExp(l.map((v, i) => i % 2 ? v : v.value), b)],
+	['primary', ['let', 'binds', 'do', 'block', 'end'],
+		(_let, l, _do, b, _end) => letExp(l, b)],
 	['primary', ['if', 'conds', 'end'],
 		(_if, c) => ifExp(c)],
 	['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'],
@@ -317,17 +317,12 @@ var grammars = [
 	['primary', ['try', 'block', 'catch', 'ID', 'do', 'block', 'end'],
 		(_try, b, _catch, i, _do, d, _end) => ['try', b, i, d]],
 
-	['cstr', ['cstr1', 'STR'],
+	['cstr', ['pstr', 'STR'],
 		(c, s) => ['+', c, s]],
-	['cstr1', ['BSTR', 'exp'],
+	['pstr', ['BSTR', 'exp'],
 		(b, e) => ['+', strToken(b.value), e]],
-	['cstr1', ['cstr1', 'BSTR', 'exp'],
+	['pstr', ['cstr1', 'BSTR', 'exp'],
 		(c, b, e) => ['+', ['+', c, strToken(b.value)], e]],
-
-	['varlist', ['variable'],
-		(v) => [v]],
-	['varlist', ['varlist', ',', 'variable'],
-		(l, _c, v) => l.concat(v)],
 
 	['idlist', ['ID'],
 		(v) => [v]],
@@ -344,6 +339,21 @@ var grammars = [
 		(p, _l, e, _r) => ['.', p, e]],
 	['variable', ['primary', '.', 'ID'],
 		(p, _dot, i) => ['.', p, strToken(i.value)]],
+
+	['varlist', ['variable'],
+		(v) => [v]],
+	['varlist', ['varlist', ',', 'variable'],
+		(l, _c, v) => l.concat(v)],
+
+	['binds', ['bindlist']],
+	['binds', ['bindlist', 'fieldsep']],
+
+	['bindlist', ['bind']],
+	['bindlist', ['bindlist', 'fieldsep', 'bind'],
+		(l, _sep, b) => l.concat(b)],
+
+	['bind', ['ID', '=', 'exp'],
+		(i, _eq, e) => [i, e]],
 
 	// parameters
 	['pars', ['(', ')'],

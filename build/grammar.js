@@ -170,7 +170,7 @@
 	function applyExp(object, methodName, args) {
 		var sym = symbol(),
 		    fn = ['.', sym, methodName];
-		return ['let', sym, object, [fn, ['named-arg', strToken('@self'), sym]].concat(args).concat()];
+		return ['let', sym, object, [fn, ['named-arg', strToken('@self'), sym]].concat(args)];
 	}
 
 	var grammars = [['S', ['block']], ['block', ['body']], ['block', ['newlines', 'body'], function (_n, b) {
@@ -184,7 +184,7 @@
 	}], ['stmtlist', ['stmtlist', 'cstmt'], function (l, s) {
 		return l.concat([s]);
 	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']], ['stmt', ['export', 'exp'], function (_export, e) {
-		return ['set-env', 'export', e];
+		return ['set-env', '@export', e];
 	}], ['stmt', ['import', 'idlist', 'from', 'STR'], function (_import, l, _from, s) {
 		return ['import', s, ['array'].concat(l.map(function (i) {
 			return strToken(i.value);
@@ -197,7 +197,7 @@
 		return setExp(li, le);
 	}], ['stmt', ['variable', 'MUT', 'exp'], function (v, o, e) {
 		return mutExp(o, v, e);
-	}], ['exp', ['sprimary']], ['exp', ['NOT', 'exp'], function (o, e) {
+	}], ['exp', ['sexp']], ['exp', ['NOT', 'exp'], function (o, e) {
 		return [o, e];
 	}], ['exp', ['exp', '|', 'exp'], function (e1, o, e2) {
 		return [e2, e1];
@@ -211,7 +211,7 @@
 		return [o, e1, e2];
 	}], ['exp', ['exp', 'POW', 'exp'], function (e1, o, e2) {
 		return [o, e1, e2];
-	}], ['sprimary', ['primary']], ['sprimary', ['ADD', 'primary'], function (a, p) {
+	}], ['sexp', ['primary']], ['sexp', ['ADD', 'primary'], function (a, p) {
 		return [a, 0, p];
 	}], ['primary', ['ID']], ['primary', ['local']], ['primary', ['cstr']], ['primary', ['literal']], ['primary', ['local', 'ID'], function (_l, i) {
 		return ['.', 'local', i];
@@ -225,10 +225,8 @@
 		return ['.', p, strToken(i.value)];
 	}], ['primary', ['do', 'block', 'end'], function (_do, b, _end) {
 		return letExp([], b);
-	}], ['primary', ['let', 'fieldlist', 'do', 'block', 'end'], function (_let, l, _do, b, _end) {
-		return letExp(l.map(function (v, i) {
-			return i % 2 ? v : v.value;
-		}), b);
+	}], ['primary', ['let', 'binds', 'do', 'block', 'end'], function (_let, l, _do, b, _end) {
+		return letExp(l, b);
 	}], ['primary', ['if', 'conds', 'end'], function (_if, c) {
 		return ifExp(c);
 	}], ['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'], function (_for, i, _eq, t, _do, b, _end) {
@@ -249,10 +247,6 @@
 		return ['+', strToken(b.value), e];
 	}], ['cstr1', ['cstr1', 'BSTR', 'exp'], function (c, b, e) {
 		return ['+', ['+', c, strToken(b.value)], e];
-	}], ['varlist', ['variable'], function (v) {
-		return [v];
-	}], ['varlist', ['varlist', ',', 'variable'], function (l, _c, v) {
-		return l.concat(v);
 	}], ['idlist', ['ID'], function (v) {
 		return [v];
 	}], ['idlist', ['idlist', ',', 'ID'], function (l, _c, v) {
@@ -265,7 +259,15 @@
 		return ['.', p, e];
 	}], ['variable', ['primary', '.', 'ID'], function (p, _dot, i) {
 		return ['.', p, strToken(i.value)];
-	}],
+	}], ['varlist', ['variable'], function (v) {
+		return [v];
+	}], ['varlist', ['varlist', ',', 'variable'], function (l, _c, v) {
+		return l.concat(v);
+	}], ['bind', ['ID', '=', 'exp'], function (i, _eq, e) {
+		return [i, e];
+	}], ['bindlist', ['bind']], ['bindlist', ['bindlist', 'fieldsep', 'bind'], function (l, _sep, b) {
+		return l.concat(b);
+	}], ['binds', ['bindlist']], ['binds', ['bindlist', 'fieldsep']],
 
 	// parameters
 	['pars', ['(', ')'], function (d) {

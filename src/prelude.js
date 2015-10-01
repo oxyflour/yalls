@@ -4,11 +4,26 @@ var self = {
 
 	'new': function f(obj) {
 		obj = obj || { }
-		for (var k in f.arga)
-			obj[k] = f.arga[k]
 
 		obj['@proto'] = this
 		obj['@'] = obj['@'] || this['@'] || self['@']
+
+		var hooks = { }, hasHook = false
+		for (var k in f.arga) {
+			if (k[0] === '@')
+				hasHook = hooks[k] = f.arga[k]
+			else
+				obj[k] = f.arga[k]
+		}
+
+		if (hasHook) {
+			var lookup = obj['@']
+			obj['@'] = function(prop, value) {
+				var action = arguments.length > 1 ? '@set' : '@get',
+					propAction = action + '@' + prop
+				return (hooks[propAction] || hooks[action] || lookup).apply(this, arguments)
+			}
+		}
 
 		return obj
 	},
@@ -20,8 +35,6 @@ var self = {
 		var obj = this
 		while (obj && obj[prop] === undefined)
 			obj = obj['@proto']
-
-		// may throw 'prop not found'
 		return obj && obj[prop]
 	},
 
@@ -74,6 +87,14 @@ var prelude = {
 	'==': (a, b) => a === b,
 	'~=': (a, b) => a !== b,
 
+	'map': function(object, func) {
+		var data = [ ], ret = [ ],
+			iterator = prelude.iterator(object)
+		while (data = iterator.apply(undefined, data))
+			ret.push(func.apply(undefined, data))
+		return ret
+	},
+
 	'iterator': function(object) {
 		if (typeof(object) === 'function')
 			return object
@@ -81,14 +102,6 @@ var prelude = {
 			return prelude.ipair(object)
 		else
 			return prelude.pair(object)
-	},
-
-	'map': function(object, func) {
-		var data = [ ], ret = [ ],
-			iterator = prelude.iterator(object)
-		while (data = iterator.apply(undefined, data))
-			ret.push(func.apply(undefined, data))
-		return ret
 	},
 
 	'range': function() {
