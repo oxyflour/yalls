@@ -197,7 +197,7 @@
 		return setExp(li, le);
 	}], ['stmt', ['variable', 'MUT', 'exp'], function (v, o, e) {
 		return mutExp(o, v, e);
-	}], ['exp', ['sexp']], ['exp', ['NOT', 'exp'], function (o, e) {
+	}], ['exp', ['sprim']], ['exp', ['NOT', 'exp'], function (o, e) {
 		return [o, e];
 	}], ['exp', ['exp', '|', 'exp'], function (e1, o, e2) {
 		return [e2, e1];
@@ -211,7 +211,7 @@
 		return [o, e1, e2];
 	}], ['exp', ['exp', 'POW', 'exp'], function (e1, o, e2) {
 		return [o, e1, e2];
-	}], ['sexp', ['primary']], ['sexp', ['ADD', 'primary'], function (a, p) {
+	}], ['sprim', ['primary']], ['sprim', ['ADD', 'primary'], function (a, p) {
 		return [a, 0, p];
 	}], ['primary', ['variable']], ['primary', ['cstr']], ['primary', ['literal']], ['primary', ['(', 'exp', ')'], function (_l, c, _r) {
 		return c;

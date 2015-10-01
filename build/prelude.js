@@ -6,7 +6,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 	var self = {
 
-		'new': function f(obj) {
+		'extend': function f(obj) {
 			obj = obj || {};
 
 			obj['@proto'] = this;
@@ -15,7 +15,10 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			var hooks = {},
 			    hasHook = false;
 			for (var k in f.arga) {
-				if (k[0] === '@') hasHook = hooks[k] = f.arga[k];else obj[k] = f.arga[k];
+				if (k[0] === '@') {
+					hooks[k] = f.arga[k];
+					hasHook = k !== '@';
+				} else obj[k] = f.arga[k];
 			}
 
 			if (hasHook) obj['@'] = prelude.hook.apply2(this, [obj['@']], hooks);

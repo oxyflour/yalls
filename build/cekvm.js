@@ -179,14 +179,6 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         }
     };
 
-    function stmt(exp) {
-        if (!Array.isArray(exp)) return exp;
-
-        exp = exp.map(stmt);
-        exp.isStatement = true;
-        return exp;
-    }
-
     // http://matt.might.net/articles/a-normalization/
     function anf(exp) {
         if (!Array.isArray(exp)) return exp;
@@ -256,11 +248,18 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         }
     };
 
+    function compile(tree) {
+        if (Array.isArray(tree)) return tree.map(compile);else if (tree === null || tree === undefined) return undefined;else if (tree.type === 'STR') return { yallsString: tree.value };else if (tree.value !== undefined) return tree.value;else return tree;
+    }
+
+    function markStmt(exp) {
+        if (!Array.isArray(exp)) return;
+        exp.isStatement = true;
+        exp.forEach(markStmt);
+    }
+
     function run(exp, env, kont) {
-        if (!exp.isStatement) {
-            exp = anf(exp);
-            exp = stmt(exp);
-        }
+        if (!exp.isStatement) markStmt(exp);
 
         var state = [exp, env, kont];
         while (state[0] && state[0].isStatement || state[2]) state = step.apply(undefined, state);
@@ -268,6 +267,9 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
     }
 
     run.environment = environment;
+    run.compile = function (tree) {
+        return anf(compile(tree));
+    };
 
     if (typeof module !== 'undefined') module.exports = run;else if (typeof window !== 'undefined') window.evaluate = run;
 })();

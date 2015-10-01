@@ -264,7 +264,7 @@ var grammars = [
 	['stmt', ['variable', 'MUT', 'exp'],
 		(v, o, e) => mutExp(o, v, e)],
 
-	['exp', ['sexp']],
+	['exp', ['sprim']],
 	['exp', ['NOT', 'exp'],
 		(o, e) => [o, e]],
 	['exp', ['exp', '|', 'exp'],
@@ -280,8 +280,8 @@ var grammars = [
 	['exp', ['exp', 'POW', 'exp'],
 		(e1, o, e2) => [o, e1, e2]],
 
-	['sexp', ['primary']],
-	['sexp', ['ADD', 'primary'],
+	['sprim', ['primary']],
+	['sprim', ['ADD', 'primary'],
 		(a, p) => [a, 0, p]],
 
 	['primary', ['variable']],

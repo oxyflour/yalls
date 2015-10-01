@@ -200,7 +200,7 @@ c = self.extend(
 
 echo('name of c is ', c.name)
 c.name = 'd'
-echo('name of c is ', c.name)
+echo('name of c is still ', c.name)
 
 </script>
 <script title="dsl (html)" type="script/x-lua">
@@ -273,19 +273,6 @@ $('#result').append(text)
 		}
 	}
 
-	function compile(tree) {
-		if (Array.isArray(tree))
-			return tree.map(compile)
-		else if (tree === null || tree === undefined)
-			return undefined
-		else if (tree.type === 'STR')
-			return { yallsString:tree.value }
-		else if (tree.value !== undefined)
-			return tree.value
-		else
-			return tree
-	}
-
 	function execute() {
 		if (!table) return
 		$('#result').empty()
@@ -294,11 +281,12 @@ $('#result').append(text)
 		try {
 			var input = editor.getValue(),
 				tree = grammar.parse(input, table),
-				code = compile(tree)
+				code = evaluate.compile(tree),
+				sandbox = evaluate.environment(env)
 			$('#tree').html(format(code))
 
 			var tickStart = Date.now()
-			evaluate(code, evaluate.environment(env))
+			evaluate(code, sandbox)
 			$('#time').text((Date.now() - tickStart) + 'ms')
 		}
 		catch (e) {
@@ -316,8 +304,9 @@ $('#result').append(text)
 	env('import', function f(file, names) {
 		var input = $('#' + file).text(),
 			tree = grammar.parse(input, table),
+			code = evaluate.compile(tree),
 			sandbox = evaluate.environment(null, prelude)
-		evaluate(compile(tree), sandbox)
+		evaluate(code, sandbox)
 
 		var exports = sandbox('@export')
 		names.forEach(function(name) {
