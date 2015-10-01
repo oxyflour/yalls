@@ -120,10 +120,10 @@ var actions = [
 	[/\:=|\+=|-=|\*=|\/=|%=/,
 		m => token('MUT', m)],
 
-	[/if|elseif|then|else|let|fn|while|for|do|end|nil|local|try|catch|throw|export|import|from/,
+	[/if|elseif|then|else|let|fn|while|for|do|end|nil|local|try|catch|throw|export|import|as|is/,
 		m => token(m, m)],
 
-	[/=>|\[|{|\(|\]|}|\)|\.|=|,|\:|\|/,
+	[/=>|\[|{|\(|\]|}|\)|\.|=|,|\:|\||#|@/,
 		m => token(m, m)],
 
 	[/[a-zA-Z\$_]+\d*\w*/,
@@ -151,6 +151,13 @@ function letExp(vars, body) {
 		return ['let', vars[0], vars[1], body]
 	else
 		return ['let', vars[0], vars[1], letExp(vars.slice(2), body)]
+}
+
+// convert to setExp
+function unpackExp(type, varlist, exp) {
+	var sym = symbol(),
+		explist = varlist.map((v, i) => ['.', sym, type === '{}' ? strToken(v.value) : i])
+	return setExp([sym].concat(varlist), [['set-env', sym, exp]].concat(explist))
 }
 
 // [set c1 e1 c2 e2]
@@ -253,12 +260,14 @@ var grammars = [
 	['stmt', ['exp']],
 	['stmt', ['export', 'exp'],
 		(_export, e) => ['set-env', '@export', e]],
-	['stmt', ['import', 'idlist', 'from', 'STR'],
-		(_import, l, _from, s) => ['import', s, ['array'].concat(l.map(i => strToken(i.value)))]],
 	['stmt', ['fn', 'ID', 'pars', 'block', 'end'],
 		(_func, i, p, b, _end) => ['set-local', i, ['lambda'].concat(p).concat([b])]],
 	['stmt', ['varlist', '=', 'explist'],
-		(li, _eq, le) => setExp(li, le)],
+		(vl, _eq, el) => setExp(vl, el)],
+	['stmt', ['varlist', '=', 'MUL', 'exp'],
+		(vl, _eq, _s, e) => unpackExp('[]', vl, e)],
+	['stmt', ['varlist', '=', 'MUL', 'MUL', 'exp'],
+		(vl, _eq, _s, __s, e) => unpackExp('{}', vl, e)],
 
 	['exp', ['cprim']],
 	['exp', ['throw', 'exp'],

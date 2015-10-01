@@ -97,9 +97,9 @@
 		return token('AND', m);
 	}], [/\:=|\+=|-=|\*=|\/=|%=/, function (m) {
 		return token('MUT', m);
-	}], [/if|elseif|then|else|let|fn|while|for|do|end|nil|local|try|catch|throw|export|import|from/, function (m) {
+	}], [/if|elseif|then|else|let|fn|while|for|do|end|nil|local|try|catch|throw|export|import|as|is/, function (m) {
 		return token(m, m);
-	}], [/=>|\[|{|\(|\]|}|\)|\.|=|,|\:|\|/, function (m) {
+	}], [/=>|\[|{|\(|\]|}|\)|\.|=|,|\:|\||#|@/, function (m) {
 		return token(m, m);
 	}], [/[a-zA-Z\$_]+\d*\w*/, function (m) {
 		return token('ID', m);
@@ -119,6 +119,15 @@
 	// [let c1 e1 c2 e2 ...] -> [let c1 e1 [let c2 e2]]
 	function letExp(vars, body) {
 		if (vars.length < 2) return ['let', undefined, undefined, body];else if (vars.length == 2) return ['let', vars[0], vars[1], body];else return ['let', vars[0], vars[1], letExp(vars.slice(2), body)];
+	}
+
+	// convert to setExp
+	function unpackExp(type, varlist, exp) {
+		var sym = symbol(),
+		    explist = varlist.map(function (v, i) {
+			return ['.', sym, type === '{}' ? strToken(v.value) : i];
+		});
+		return setExp([sym].concat(varlist), [['set-env', sym, exp]].concat(explist));
 	}
 
 	// [set c1 e1 c2 e2]
@@ -185,14 +194,14 @@
 		return l.concat([s]);
 	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']], ['stmt', ['export', 'exp'], function (_export, e) {
 		return ['set-env', '@export', e];
-	}], ['stmt', ['import', 'idlist', 'from', 'STR'], function (_import, l, _from, s) {
-		return ['import', s, ['array'].concat(l.map(function (i) {
-			return strToken(i.value);
-		}))];
 	}], ['stmt', ['fn', 'ID', 'pars', 'block', 'end'], function (_func, i, p, b, _end) {
 		return ['set-local', i, ['lambda'].concat(p).concat([b])];
-	}], ['stmt', ['varlist', '=', 'explist'], function (li, _eq, le) {
-		return setExp(li, le);
+	}], ['stmt', ['varlist', '=', 'explist'], function (vl, _eq, el) {
+		return setExp(vl, el);
+	}], ['stmt', ['varlist', '=', 'MUL', 'exp'], function (vl, _eq, _s, e) {
+		return unpackExp('[]', vl, e);
+	}], ['stmt', ['varlist', '=', 'MUL', 'MUL', 'exp'], function (vl, _eq, _s, __s, e) {
+		return unpackExp('{}', vl, e);
 	}], ['exp', ['cprim']], ['exp', ['throw', 'exp'], function (t, e) {
 		return [t, e];
 	}], ['exp', ['variable', 'MUT', 'exp'], function (v, o, e) {

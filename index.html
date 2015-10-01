@@ -78,7 +78,7 @@ end
 export { mkGenerator }
 </script>
 <script title="yield and generator" type="script/x-lua">
-import mkGenerator from 'genLib'
+mkGenerator = **require('genLib')
 
 iter = mkGenerator(fn(yield)
     yield(1)
@@ -120,7 +120,7 @@ end).appendTo('#result')
 
 </script>
 <script title="async control flow" type="script/x-lua">
-import mkGenerator from 'genLib'
+mkGenerator = **require('genLib')
 
 doAsync = fn(exec, next)
 	next = mkGenerator(yield => exec(yield, next))
@@ -287,7 +287,7 @@ $('#result').append(text)
 			.map(function(a) { return '' + a }).join(' ')
 		$('<pre></pre>').text(content).appendTo('#console')
 	})
-	env('import', function f(file, names) {
+	env('require', function(file) {
 		var input = $('#' + file).text(),
 			tree = grammar.parse(input, table),
 			code = evaluate.compile(tree),
@@ -295,11 +295,7 @@ $('#result').append(text)
 
 		sandbox('@export', { })
 		evaluate(code, sandbox)
-
-		var exp = sandbox('@export')
-		names.forEach(function(name) {
-			env(name, exp[name])
-		})
+		return sandbox('@export')
 	})
 	env('console', console)
 	env('now', Date.now.bind(Date))
