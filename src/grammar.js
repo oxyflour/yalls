@@ -347,14 +347,14 @@ var grammars = [
 	['varlist', ['variable'],
 		(v) => [v]],
 	['varlist', ['varlist', ',', 'variable'],
-		(l, _c, v) => l.concat(v)],
+		(l, _c, v) => l.concat([v])],
 
 	['binds', ['bindlist']],
 	['binds', ['bindlist', 'fieldsep']],
 
 	['bindlist', ['bind']],
 	['bindlist', ['bindlist', 'fieldsep', 'bind'],
-		(l, _sep, b) => l.concat(b)],
+		(l, _sep, b) => l.concat([b])],
 
 	['bind', ['ID', '=', 'exp'],
 		(i, _eq, e) => [i, e]],

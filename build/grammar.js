@@ -265,9 +265,9 @@
 	}], ['varlist', ['variable'], function (v) {
 		return [v];
 	}], ['varlist', ['varlist', ',', 'variable'], function (l, _c, v) {
-		return l.concat(v);
+		return l.concat([v]);
 	}], ['binds', ['bindlist']], ['binds', ['bindlist', 'fieldsep']], ['bindlist', ['bind']], ['bindlist', ['bindlist', 'fieldsep', 'bind'], function (l, _sep, b) {
-		return l.concat(b);
+		return l.concat([b]);
 	}], ['bind', ['ID', '=', 'exp'], function (i, _eq, e) {
 		return [i, e];
 	}],
