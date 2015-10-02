@@ -201,18 +201,17 @@ function whileExp(cond, block) {
 
 // [for iter vars block]
 function forExp(iter, vars, block) {
-	var $data = symbol(), $iter = symbol(), $lambda = symbol(), $tmp = symbol(),
+	var $data = symbol(), $iter = symbol(), $lambda = symbol()
 		lambda = ['lambda'].concat(vars).concat([block])
 	return ['let', 'continue', 'nil',
+		['let', $data, 'nil',
 		['let', $iter, ['iterator', iter],
 		['let', $lambda, lambda,
-		['let', $data, [$iter, ['named-arg', strToken('@args'), $data]],
 		['let', symbol(), ['callcc', ['lambda', 'cc', ['set-env', 'continue', 'cc']]],
+		['let', symbol(), ['set-env', $data, [$iter, ['named-arg', strToken('@args'), $data]]],
 			['if', $data,
-				['let', $tmp, [$iter, ['named-arg', strToken('@args'), $data]],
 				['let', symbol(), [$lambda, ['named-arg', strToken('@args'), $data]],
-				['let', symbol(), ['set-env', $data, $tmp],
-					['continue']]]]]]]]]]
+					['continue']]]]]]]]]
 }
 
 // [and/or e1 e2] -> [let # e1 [if # e2 #]]

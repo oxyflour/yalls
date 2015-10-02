@@ -67,15 +67,22 @@ mkGenerator = fn(iter)
 	end
 	fn(value)
 		ret = next and next(value)
-		if ret then
-			next := ret.next
-			ret.value
-		end
+		next := ret and ret.next
+		ret and ret.value
 	end
 end
 
+doAsync = fn(exec, next)
+	next = mkGenerator(fn(yield)
+		exec(yield, next)
+		-- stop it or the code after doAsync will be executed again
+		yield()
+	end)
+	next()
+end
+
 -- used for other scripts
-export { mkGenerator }
+export { mkGenerator, doAsync }
 </script>
 <script title="yield and generator" type="script/x-lua">
 mkGenerator = **require('genLib')
@@ -120,12 +127,7 @@ end).appendTo('#result')
 
 </script>
 <script title="async control flow" type="script/x-lua">
-mkGenerator = **require('genLib')
-
-doAsync = fn(exec, next)
-	next = mkGenerator(yield => exec(yield, next))
-	next()
-end
+doAsync = **require('genLib')
 
 doAsync(fn(yield, next)
 	echo('starting...')
@@ -144,7 +146,10 @@ doAsync(fn(yield, next)
 	echo(now() - start)
 
 	json = yield($.get('package.json').done(next).fail(next))
-	echo(json.description or json.statusText)
+	echo(json.description)
+
+	xhr = yield($.get('/404').done(next).fail(next))
+	echo(xhr.statusText)
 end)
 
 </script>
