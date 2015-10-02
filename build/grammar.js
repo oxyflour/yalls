@@ -83,7 +83,7 @@
 	[/\.\./, beginCommentGen('continue')], [/[^\n]+/, eatComment, 'continue'], [/\n/, endComment, 'continue'],
 
 	// comments
-	[/--/, beginCommentGen('comment-sl')], [/[^\n]+/, eatComment, 'comment-sl'], [/\n/, endCommentWithNewLine, 'comment-sl'], [/--\[\[/, beginCommentGen('comment-ml')], [/.*?--\]\]/, endComment, 'comment-ml'], [/.*/, eatComment, 'comment-ml'], [/\n/, eatComment, 'comment-ml'], [/not/, function (m) {
+	[/--/, beginCommentGen('comment-sl')], [/[^\n]+/, eatComment, 'comment-sl'], [/\n/, endCommentWithNewLine, 'comment-sl'], [/--\[\[/, beginCommentGen('comment-ml')], [/.*?--\]\]/, endComment, 'comment-ml'], [/.*/, eatComment, 'comment-ml'], [/[\r\n]/, eatComment, 'comment-ml'], [/not/, function (m) {
 		return token('NOT', m);
 	}], [/\^/, function (m) {
 		return token('POW', m);
@@ -163,8 +163,8 @@
 	function forExp(iter, vars, block) {
 		var $data = symbol(),
 		    $iter = symbol(),
-		    $lambda = symbol();
-		lambda = ['lambda'].concat(vars).concat([block]);
+		    $lambda = symbol(),
+		    lambda = ['lambda'].concat(vars).concat([block]);
 		return ['let', 'continue', 'nil', ['let', $data, 'nil', ['let', $iter, ['iterator', iter], ['let', $lambda, lambda, ['let', symbol(), ['callcc', ['lambda', 'cc', ['set-env', 'continue', 'cc']]], ['let', symbol(), ['set-env', $data, [$iter, ['named-arg', strToken('@args'), $data]]], ['if', $data, ['let', symbol(), [$lambda, ['named-arg', strToken('@args'), $data]], ['continue']]]]]]]]];
 	}
 

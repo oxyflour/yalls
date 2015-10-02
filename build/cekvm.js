@@ -176,6 +176,11 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
                 return value(a, env);
             });
             return applyProc(env('self'), value(exp[0], env), args, kont);
+        },
+        // fn a a ...
+        'eval': function _eval(exp, env, kont) {
+            var code = value(exp[1], env);
+            return [markStmt(code), env, kont];
         }
     };
 
@@ -252,17 +257,19 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         if (Array.isArray(tree)) return tree.map(compile);else if (tree === null || tree === undefined) return undefined;else if (tree.type === 'STR') return { yallsString: tree.value };else if (tree.value !== undefined) return tree.value;else return tree;
     }
 
-    function markStmt(exp) {
-        if (!Array.isArray(exp)) return;
-        exp.isStatement = true;
-        exp.forEach(markStmt);
+    function markStmt(exp, index) {
+        if (index === undefined && !Array.isArray(exp)) {
+            exp = ['begin', exp];
+        }
+        if (Array.isArray(exp)) {
+            exp.isStatement = true;
+            exp.forEach(markStmt);
+        }
+        return exp;
     }
 
     function run(exp, env, kont) {
-        if (!Array.isArray(exp)) exp = ['begin', exp];
-        if (!exp.isStatement) markStmt(exp);
-
-        var state = [exp, env, kont];
+        var state = [markStmt(exp), env, kont];
         while (state[0] && state[0].isStatement || state[2]) state = step.apply(undefined, state);
         return state[0];
     }

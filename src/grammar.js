@@ -102,7 +102,7 @@ var actions = [
 	[/--\[\[/,		beginCommentGen('comment-ml')],
 	[/.*?--\]\]/,	endComment,				'comment-ml'],
 	[/.*/,			eatComment,				'comment-ml'],
-	[/\n/,			eatComment,				'comment-ml'],
+	[/[\r\n]/,		eatComment,				'comment-ml'],
 
 	[/not/,
 		m => token('NOT', m)],
@@ -201,7 +201,7 @@ function whileExp(cond, block) {
 
 // [for iter vars block]
 function forExp(iter, vars, block) {
-	var $data = symbol(), $iter = symbol(), $lambda = symbol()
+	var $data = symbol(), $iter = symbol(), $lambda = symbol(),
 		lambda = ['lambda'].concat(vars).concat([block])
 	return ['let', 'continue', 'nil',
 		['let', $data, 'nil',
