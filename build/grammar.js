@@ -226,9 +226,9 @@
 	}], ['primary', ['variable']], ['primary', ['cstr']], ['primary', ['literal']], ['primary', ['(', 'exp', ')'], function (_l, c, _r) {
 		return c;
 	}], ['primary', ['do', 'block', 'end'], function (_do, b, _end) {
-		return letExp([], b);
+		return [['lambda', b]];
 	}], ['primary', ['let', 'binds', 'do', 'block', 'end'], function (_let, l, _do, b, _end) {
-		return letExp(l, b);
+		return [['lambda', letExp(l, b)]];
 	}], ['primary', ['if', 'conds', 'end'], function (_if, c) {
 		return ifExp(c);
 	}], ['primary', ['for', 'idlist', '=', 'iterator', 'do', 'block', 'end'], function (_for, i, _eq, t, _do, b, _end) {

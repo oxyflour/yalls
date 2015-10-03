@@ -18,22 +18,27 @@ Function.prototype.apply2 = function(self, args, arga, kont) {
 
 function environment(parent, local) {
     local = local || { }
+    function env(name, value, setParent) {
+        if (arguments.length > 1)
+            return !(name in local) && parent && setParent ?
+                parent(name, value, setParent) : (local[name] = value)
+        else
+            return !(name in local) && parent ?
+                parent(name) : local[name]
+    }
 
     // directly access local with 'local'
     local.local = local
-
     // save env as '@' so that variables can be access with 'local.var'
-    local['@'] = function(name, value, setParent) {
+    local['@'] = env
+    // allow overriding '@' of local
+    return function proxy(name, value, setParent) {
         if (arguments.length > 1)
-            return !(name in local) && parent && setParent ?
-                parent.apply(null, arguments) : (local[name] = value)
+            return name[0] === '#' ?
+                env(name, value, setParent) : local['@'](name, value, setParent)
         else
-            return !(name in local) && parent ? parent(name) : local[name]
-    }
-
-    // allow overwritting seek function
-    return function() {
-        return local['@'].apply(local, arguments)
+            return name[0] === '#' ?
+                env(name) : local['@'](name)
     }
 }
 
@@ -83,14 +88,19 @@ function namedArg(name, value) {
     return { name, value, isNamedArg:true }
 }
 
-function applyProc(self, proc, paras, kont) {
+function prepareProc(exp, env) {
+    var self = env('self'),
+        proc = value(exp[0], env)
+
     var args = [ ], arga = { }
-    paras && paras.forEach(e => {
+    for (var i = 1; i < exp.length; i ++) {
+        var e = value(exp[i], env)
         if (e && e.isNamedArg)
             arga[ e.name ] = e.value
         else
             args.push(e)
-    })
+    }
+
     if (arga['@self'] !== undefined) {
         self = arga['@self']
         delete arga['@self']
@@ -100,6 +110,10 @@ function applyProc(self, proc, paras, kont) {
         delete arga['@args']
     }
 
+    return { self, proc, args, arga }
+}
+
+function applyProc(self, proc, args, arga, kont) {
     if (proc && proc.yallsClosure) {
         var { lambda, parent } = proc.yallsClosure,
             env = callenv(lambda, parent, self, args, arga)
@@ -120,7 +134,8 @@ function applyProc(self, proc, paras, kont) {
 function applyKont(kont, value) {
     if (kont) {
         var [name, exp, env, lastKont] = kont
-        env = environment(env)
+        // we don't create new environment for each let
+        //env = environment(env)
         env(name, value)
         return [exp, env, lastKont]
     }
@@ -172,21 +187,23 @@ var stepStmts = {
     },
     // call/cc a
     'callcc': function(exp, env, kont) {
-        return applyProc(env('self'), value(exp[1], env), [continuation(kont)], kont)
+        var self = env('self'), proc = value(exp[1], env)
+        return applyProc(self, proc, [continuation(kont)], { }, kont)
     },
     // name-arg name arg
     'named-arg': function(exp, env, kont) {
-        return applyKont(kont, namedArg(value(exp[1], env), value(exp[2], env)))
+        var name = value(exp[1], env), arg = value(exp[2], env)
+        return applyKont(kont, namedArg(name, arg))
     },
     // fn a a ...
     'apply': function(exp, env, kont) {
-        var args = exp.slice(1).map(a => value(a, env))
-        return applyProc(env('self'), value(exp[0], env), args, kont)
+        var { self, proc, args, arga } = prepareProc(exp, env)
+        return applyProc(self, proc, args, arga, kont)
     },
     // eval compiledCode
     'eval': function(exp, env, kont) {
         var code = value(exp[1], env)
-        return [markStmt(code), env, kont]
+        return [expression(code), env, kont]
     },
 }
 
@@ -275,19 +292,20 @@ function compile(tree) {
         return tree
 }
 
-function markStmt(exp, index) {
-    if (index === undefined && !Array.isArray(exp)) {
-        exp = ['begin', exp]
-    }
+function expression(exp, index) {
     if (Array.isArray(exp)) {
+        exp.forEach(expression)
         exp.isStatement = true
-        exp.forEach(markStmt)
+    }
+    else if (index === undefined) {
+        exp = ['begin', exp]
+        exp.isStatement = true
     }
     return exp
 }
 
-function run(exp, env, kont) {
-    var state = [markStmt(exp), env, kont]
+function run(code, env, kont) {
+    var state = [expression(code), env, kont]
     while (state[0] && state[0].isStatement || state[2])
         state = step.apply(undefined, state)
     return state[0]

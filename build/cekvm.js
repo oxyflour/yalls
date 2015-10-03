@@ -22,18 +22,17 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
     function environment(parent, local) {
         local = local || {};
+        function env(name, value, setParent) {
+            if (arguments.length > 1) return !(name in local) && parent && setParent ? parent(name, value, setParent) : local[name] = value;else return !(name in local) && parent ? parent(name) : local[name];
+        }
 
         // directly access local with 'local'
         local.local = local;
-
         // save env as '@' so that variables can be access with 'local.var'
-        local['@'] = function (name, value, setParent) {
-            if (arguments.length > 1) return !(name in local) && parent && setParent ? parent.apply(null, arguments) : local[name] = value;else return !(name in local) && parent ? parent(name) : local[name];
-        };
-
-        // allow overwritting seek function
-        return function () {
-            return local['@'].apply(local, arguments);
+        local['@'] = env;
+        // allow overriding '@' of local
+        return function proxy(name, value, setParent) {
+            if (arguments.length > 1) return name[0] === '#' ? env(name, value, setParent) : local['@'](name, value, setParent);else return name[0] === '#' ? env(name) : local['@'](name);
         };
     }
 
@@ -76,12 +75,17 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         return { name: name, value: value, isNamedArg: true };
     }
 
-    function applyProc(self, proc, paras, kont) {
+    function prepareProc(exp, env) {
+        var self = env('self'),
+            proc = value(exp[0], env);
+
         var args = [],
             arga = {};
-        paras && paras.forEach(function (e) {
+        for (var i = 1; i < exp.length; i++) {
+            var e = value(exp[i], env);
             if (e && e.isNamedArg) arga[e.name] = e.value;else args.push(e);
-        });
+        }
+
         if (arga['@self'] !== undefined) {
             self = arga['@self'];
             delete arga['@self'];
@@ -91,6 +95,10 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
             delete arga['@args'];
         }
 
+        return { self: self, proc: proc, args: args, arga: arga };
+    }
+
+    function applyProc(self, proc, args, arga, kont) {
         if (proc && proc.yallsClosure) {
             var _proc$yallsClosure = proc.yallsClosure;
             var lambda = _proc$yallsClosure.lambda;
@@ -116,7 +124,8 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
             var env = _kont[2];
             var lastKont = _kont[3];
 
-            env = environment(env);
+            // we don't create new environment for each let
+            //env = environment(env)
             env(name, value);
             return [exp, env, lastKont];
         } else {
@@ -164,23 +173,31 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         },
         // call/cc a
         'callcc': function callcc(exp, env, kont) {
-            return applyProc(env('self'), value(exp[1], env), [continuation(kont)], kont);
+            var self = env('self'),
+                proc = value(exp[1], env);
+            return applyProc(self, proc, [continuation(kont)], {}, kont);
         },
         // name-arg name arg
         'named-arg': function namedArg(exp, env, kont) {
-            return applyKont(kont, _namedArg(value(exp[1], env), value(exp[2], env)));
+            var name = value(exp[1], env),
+                arg = value(exp[2], env);
+            return applyKont(kont, _namedArg(name, arg));
         },
         // fn a a ...
         'apply': function apply(exp, env, kont) {
-            var args = exp.slice(1).map(function (a) {
-                return value(a, env);
-            });
-            return applyProc(env('self'), value(exp[0], env), args, kont);
+            var _prepareProc = prepareProc(exp, env);
+
+            var self = _prepareProc.self;
+            var proc = _prepareProc.proc;
+            var args = _prepareProc.args;
+            var arga = _prepareProc.arga;
+
+            return applyProc(self, proc, args, arga, kont);
         },
-        // fn a a ...
+        // eval compiledCode
         'eval': function _eval(exp, env, kont) {
             var code = value(exp[1], env);
-            return [markStmt(code), env, kont];
+            return [expression(code), env, kont];
         }
     };
 
@@ -257,19 +274,19 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         if (Array.isArray(tree)) return tree.map(compile);else if (tree === null || tree === undefined) return undefined;else if (tree.type === 'STR') return { yallsString: tree.value };else if (tree.value !== undefined) return tree.value;else return tree;
     }
 
-    function markStmt(exp, index) {
-        if (index === undefined && !Array.isArray(exp)) {
-            exp = ['begin', exp];
-        }
+    function expression(exp, index) {
         if (Array.isArray(exp)) {
+            exp.forEach(expression);
             exp.isStatement = true;
-            exp.forEach(markStmt);
+        } else if (index === undefined) {
+            exp = ['begin', exp];
+            exp.isStatement = true;
         }
         return exp;
     }
 
-    function run(exp, env, kont) {
-        var state = [markStmt(exp), env, kont];
+    function run(code, env, kont) {
+        var state = [expression(code), env, kont];
         while (state[0] && state[0].isStatement || state[2]) state = step.apply(undefined, state);
         return state[0];
     }
