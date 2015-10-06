@@ -199,11 +199,11 @@ echo('name of c is still ', c.name)
 <script title="dsl (html)" type="script/x-lua">
 htmlBuilder = fn(env)
 	css = fn()
-		map(arga, (v, k) => "{{ k }}:{{ v }}").join(';')
+		loop(arga, (v, k) => "{{ k }}:{{ v }}").join(';')
 	end
 	env['@'] = hook(env['@'], '@get' = fn(name)
 		local[name] or fn()
-			attrs = map(arga, (v, k) => "{{ k }}=\"{{ v }}\"").join(' ')
+			attrs = loop(arga, (v, k) => "{{ k }}=\"{{ v }}\"").join(' ')
 			tag = attrs and name + ' ' + attrs or name
 			if args.length then
 				"<{{ tag }}>{{ args.join('') }}</{{ name }}>"

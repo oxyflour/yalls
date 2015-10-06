@@ -2,18 +2,18 @@
 
 var self = {
 
-	'extend': function f(obj) {
+	'extend': function extend(obj) {
 		obj = obj || { }
 
 		obj['@proto'] = this
 		obj['@'] = obj['@'] || this['@'] || self['@']
 
 		var hooks = { }, hasHook = false
-		for (var k in f.arga) {
+		for (var k in extend.arga) {
 			if (k[0] === '@' && k !== '@')
-				hasHook = hooks[k] = f.arga[k]
+				hasHook = hooks[k] = extend.arga[k]
 			else
-				obj[k] = f.arga[k]
+				obj[k] = extend.arga[k]
 		}
 
 		if (hasHook)
@@ -37,6 +37,10 @@ var self = {
 var arrayProto = {
 
 	'@proto': self,
+
+	'first': function() {
+		return this[0]
+	},
 
 	'last': function() {
 		return this[this.length - 1]
@@ -81,12 +85,20 @@ var prelude = {
 	'==': (a, b) => a === b,
 	'~=': (a, b) => a !== b,
 
-	'map': function(object, func) {
+	'loop': function(object, func) {
 		var data = [ ], ret = [ ],
 			iterator = prelude.iterator(object)
 		while (data = iterator.apply(undefined, data))
 			ret.push(func.apply(undefined, data))
 		return ret
+	},
+
+	'zip': function zip() {
+		var arrays = Array.prototype.slice.call(arguments),
+			fn = zip.arga.func || prelude.array
+		return arrays[0].map(function(e, i) {
+			return fn.apply(null, arrays.map(a => a[i]))
+		})
 	},
 
 	'iterator': function(object) {
@@ -134,10 +146,13 @@ var prelude = {
 		}
 	},
 
-	'array': function() {
-		var array = Array.prototype.slice.call(arguments)
-		array['@proto'] = arrayProto
-		return array
+	'array': function array() {
+		var arr = Array.prototype.slice.call(arguments)
+		arr['@proto'] = arrayProto
+		if (array.arga && array.arga.size)
+			for (var i = 0; i < array.arga.size; i ++)
+				arr[i] = arr[i]
+		return arr
 	},
 
 	'dict': function() {
@@ -150,14 +165,14 @@ var prelude = {
 
 	'self': self,
 
-	'.': function f(obj) {
+	'.': function dot(obj) {
 		var fn = obj['@'] || self['@'],
 			args = Array.prototype.slice.call(arguments).slice(1)
-		return fn.apply2(obj, args, f.arga)
+		return fn.apply2(obj, args, dot.arga)
 	},
 
-	'hook': function f(lookup) {
-		var hooks = f.arga
+	'hook': function hook(lookup) {
+		var hooks = hook.arga
 		return function(prop, value) {
 			var action = arguments.length > 1 ? '@set' : '@get',
 				propAction = action + '@' + prop

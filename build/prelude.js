@@ -6,7 +6,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 	var self = {
 
-		'extend': function f(obj) {
+		'extend': function extend(obj) {
 			obj = obj || {};
 
 			obj['@proto'] = this;
@@ -14,8 +14,8 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 			var hooks = {},
 			    hasHook = false;
-			for (var k in f.arga) {
-				if (k[0] === '@' && k !== '@') hasHook = hooks[k] = f.arga[k];else obj[k] = f.arga[k];
+			for (var k in extend.arga) {
+				if (k[0] === '@' && k !== '@') hasHook = hooks[k] = extend.arga[k];else obj[k] = extend.arga[k];
 			}
 
 			if (hasHook) obj['@'] = prelude.hook.apply2(this, [obj['@']], hooks);
@@ -36,6 +36,10 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 	var arrayProto = {
 
 		'@proto': self,
+
+		'first': function first() {
+			return this[0];
+		},
 
 		'last': function last() {
 			return this[this.length - 1];
@@ -110,12 +114,22 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			return a !== b;
 		},
 
-		'map': function map(object, func) {
+		'loop': function loop(object, func) {
 			var data = [],
 			    ret = [],
 			    iterator = prelude.iterator(object);
 			while (data = iterator.apply(undefined, data)) ret.push(func.apply(undefined, data));
 			return ret;
+		},
+
+		'zip': function zip() {
+			var arrays = Array.prototype.slice.call(arguments),
+			    fn = zip.arga.func || prelude.array;
+			return arrays[0].map(function (e, i) {
+				return fn.apply(null, arrays.map(function (a) {
+					return a[i];
+				}));
+			});
 		},
 
 		'iterator': function iterator(object) {
@@ -169,9 +183,10 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 		},
 
 		'array': function array() {
-			var array = Array.prototype.slice.call(arguments);
-			array['@proto'] = arrayProto;
-			return array;
+			var arr = Array.prototype.slice.call(arguments);
+			arr['@proto'] = arrayProto;
+			if (array.arga && array.arga.size) for (var i = 0; i < array.arga.size; i++) arr[i] = arr[i];
+			return arr;
 		},
 
 		'dict': function dict() {
@@ -183,14 +198,14 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 		'self': self,
 
-		'.': function f(obj) {
+		'.': function dot(obj) {
 			var fn = obj['@'] || self['@'],
 			    args = Array.prototype.slice.call(arguments).slice(1);
-			return fn.apply2(obj, args, f.arga);
+			return fn.apply2(obj, args, dot.arga);
 		},
 
-		'hook': function f(lookup) {
-			var hooks = f.arga;
+		'hook': function hook(lookup) {
+			var hooks = hook.arga;
 			return function (prop, value) {
 				var action = arguments.length > 1 ? '@set' : '@get',
 				    propAction = action + '@' + prop;
