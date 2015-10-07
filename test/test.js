@@ -1,31 +1,32 @@
-function compile(tree) {
-	if (Array.isArray(tree))
-		return tree.map(compile)
-	else if (tree === undefined || tree === null)
-		return 'nil'
-	else if (tree.type === 'STR')
-		return '"' + tree.value
-	else if (tree.value !== undefined)
-		return tree.value
-	else
-		return tree
-}
-
 var assert = require('assert'),
 	babel = require('babel/polyfill'),
+	fs = require('fs'),
 
 	grammar = require('../build/grammar'),
 	evaluate = require('../build/cekvm'),
 	prelude = require('../build/prelude'),
-	table = require('../build/table.json'),
+	table = require('../build/table.json')
 
-	input = require('fs').readFileSync('test/test.lua'),
-	tree = grammar.parse(input, table),
-	code = compile(tree)
+function makeRequire(file) {
+	var dir = file.replace(/[^/]*$/, '')
+	return function(file) {
+		var path = dir + '/' + file + '.lua',
+			input = fs.readFileSync(path),
+			tree = grammar.parse(input, table),
+			code = evaluate.compile(tree),
+			env = evaluate.environment(root)
 
-var env = evaluate.environment(null, prelude)
-env('describe', describe)
-env('assert', assert)
-env('it', it)
+		env('require', makeRequire(path))
+		env('@export', { })
+		evaluate(code, env)
+		return env('@export')
+	}
+}
 
-evaluate(code, env)
+var root = evaluate.environment(null, prelude)
+root('console', console)
+root('describe', describe)
+root('assert', assert)
+root('it', it)
+
+root('require', makeRequire('./test/'))('./test')

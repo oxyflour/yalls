@@ -83,7 +83,7 @@
 	[/\.\./, beginCommentGen('continue')], [/[^\n]+/, eatComment, 'continue'], [/\n/, endComment, 'continue'],
 
 	// comments
-	[/--/, beginCommentGen('comment-sl')], [/[^\n]+/, eatComment, 'comment-sl'], [/\n/, endCommentWithNewLine, 'comment-sl'], [/--\[\[/, beginCommentGen('comment-ml')], [/.*?--\]\]/, endComment, 'comment-ml'], [/.*/, eatComment, 'comment-ml'], [/[\r\n]/, eatComment, 'comment-ml'], [/not/, function (m) {
+	[/--/, beginCommentGen('comment-sl')], [/[^\n]+/, eatComment, 'comment-sl'], [/\n/, endCommentWithNewLine, 'comment-sl'], [/--\[\[/, beginCommentGen('comment-ml')], [/-/, eatComment, 'comment-ml'], [/[^-]*/, eatComment, 'comment-ml'], [/\n/, eatComment, 'comment-ml'], [/--\]\]/, endComment, 'comment-ml'], [/not/, function (m) {
 		return token('NOT', m);
 	}], [/\^/, function (m) {
 		return token('POW', m);
@@ -187,11 +187,11 @@
 		return ['begin', s];
 	}], ['body', ['stmtlist']], ['body', ['stmtlist', 'stmt'], function (l, s) {
 		return l.concat([s]);
-	}], ['newlines', ['NEWLINE']], ['newlines', ['newlines', 'NEWLINE']], ['stmtlist', ['cstmt'], function (s) {
+	}], ['newlines', ['NEWLINE']], ['newlines', ['newlines', 'NEWLINE']], ['stmtlist', ['stmt', 'newlines'], function (s) {
 		return ['begin', s];
-	}], ['stmtlist', ['stmtlist', 'cstmt'], function (l, s) {
+	}], ['stmtlist', ['stmtlist', 'stmt', 'newlines'], function (l, s) {
 		return l.concat([s]);
-	}], ['cstmt', ['stmt', 'NEWLINE']], ['cstmt', ['cstmt', 'NEWLINE']], ['stmt', ['exp']], ['stmt', ['export', 'exp'], function (_export, e) {
+	}], ['stmt', ['exp']], ['stmt', ['export', 'exp'], function (_export, e) {
 		return ['set-env', '@export', e];
 	}], ['stmt', ['fn', 'ID', 'pars', 'block', 'end'], function (_func, i, p, b, _end) {
 		return ['set-local', i, ['lambda'].concat(p).concat([b])];

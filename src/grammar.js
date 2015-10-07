@@ -100,9 +100,10 @@ var actions = [
 	[/[^\n]+/,		eatComment,				'comment-sl'],
 	[/\n/,			endCommentWithNewLine,	'comment-sl'],
 	[/--\[\[/,		beginCommentGen('comment-ml')],
-	[/.*?--\]\]/,	endComment,				'comment-ml'],
-	[/.*/,			eatComment,				'comment-ml'],
-	[/[\r\n]/,		eatComment,				'comment-ml'],
+	[/-/,			eatComment,				'comment-ml'],
+	[/[^-]*/,		eatComment,				'comment-ml'],
+	[/\n/,			eatComment,				'comment-ml'],
+	[/--\]\]/,		endComment,				'comment-ml'],
 
 	[/not/,
 		m => token('NOT', m)],
@@ -248,13 +249,10 @@ var grammars = [
 	['newlines', ['NEWLINE']],
 	['newlines', ['newlines', 'NEWLINE']],
 
-	['stmtlist', ['cstmt'],
+	['stmtlist', ['stmt', 'newlines'],
 		(s) => ['begin', s]],
-	['stmtlist', ['stmtlist', 'cstmt'],
+	['stmtlist', ['stmtlist', 'stmt', 'newlines'],
 		(l, s) => l.concat([s])],
-
-	['cstmt', ['stmt', 'NEWLINE']],
-	['cstmt', ['cstmt', 'NEWLINE']],
 
 	['stmt', ['exp']],
 	['stmt', ['export', 'exp'],

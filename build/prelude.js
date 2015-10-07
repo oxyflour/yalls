@@ -87,6 +87,9 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 		'/': function _(a, b) {
 			return a / b;
 		},
+		'%': function _(a, b) {
+			return a % b;
+		},
 
 		'+': function _(a, b) {
 			return a + b;
