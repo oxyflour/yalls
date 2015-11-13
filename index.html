@@ -154,15 +154,31 @@ end)
 
 </script>
 <script title="enhanced array/dict" type="script/x-lua">
+echo('-- number methods')
+2.times(echo)
+2.to(6).each(echo)
+
+echo('-- add number method')
+numberProto.plus = x => self + x
+numberProto.minus = x => self - x
+echo('3 + 2 - 1 =', 3.plus(2).minus(1))
+
+echo('-- array methods')
 a = [1, 2, 3]
+echo('a.first() =', a.first())
 echo('a.last() =', a.last())
+
+echo('-- array iterator')
 for v, i = a do
 	echo(i, '=>', v)
 end
 
+echo('-- object methods')
 b = { name = 'b', size = 1 }
 echo('b.keys() =', b.keys())
 echo('b.values() =', b.values())
+
+echo('-- object iterator')
 for v, k = b do
 	echo(k, '=>', v)
 end

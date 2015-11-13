@@ -33,6 +33,24 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 	};
 
+	var numberProto = {
+
+		'@proto': self,
+
+		'times': function times(fn) {
+			var ret = [];
+			for (var i = 0; i < this; i++) ret.push(fn ? fn(i) : i);
+			return ret;
+		},
+
+		'to': function to(_to) {
+			var ret = [];
+			for (var i = this; i < _to; i++) ret.push(i);
+			return ret;
+		}
+
+	};
+
 	var arrayProto = {
 
 		'@proto': self,
@@ -43,6 +61,12 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 		'last': function last() {
 			return this[this.length - 1];
+		},
+
+		'each': function each(fn) {
+			return this.forEach(function (i) {
+				return fn(i);
+			});
 		}
 
 	};
@@ -187,7 +211,6 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 		'array': function array() {
 			var arr = Array.prototype.slice.call(arguments);
-			arr['@proto'] = arrayProto;
 			if (array.arga && array.arga.size) for (var i = 0; i < array.arga.size; i++) arr[i] = arr[i];
 			return arr;
 		},
@@ -200,6 +223,10 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 		},
 
 		'self': self,
+
+		'numberProto': Number.prototype['@proto'] = numberProto,
+		'arrayProto': Array.prototype['@proto'] = arrayProto,
+		'dictProto': dictProto,
 
 		'.': function dot(obj) {
 			var fn = obj['@'] || self['@'],

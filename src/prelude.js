@@ -34,6 +34,26 @@ var self = {
 
 }
 
+var numberProto = {
+
+	'@proto': self,
+
+	'times': function(fn) {
+		var ret = [ ]
+		for (var i = 0; i < this; i ++)
+			ret.push(fn ? fn(i) : i)
+		return ret
+	},
+
+	'to': function(to) {
+		var ret = [ ]
+		for (var i = this; i < to; i ++)
+			ret.push(i)
+		return ret
+	},
+
+}
+
 var arrayProto = {
 
 	'@proto': self,
@@ -44,6 +64,10 @@ var arrayProto = {
 
 	'last': function() {
 		return this[this.length - 1]
+	},
+
+	'each': function(fn) {
+		return this.forEach(i => fn(i))
 	},
 
 }
@@ -149,7 +173,6 @@ var prelude = {
 
 	'array': function array() {
 		var arr = Array.prototype.slice.call(arguments)
-		arr['@proto'] = arrayProto
 		if (array.arga && array.arga.size)
 			for (var i = 0; i < array.arga.size; i ++)
 				arr[i] = arr[i]
@@ -165,6 +188,10 @@ var prelude = {
 	},
 
 	'self': self,
+
+	'numberProto': Number.prototype['@proto'] = numberProto,
+	'arrayProto': Array.prototype['@proto'] = arrayProto,
+	'dictProto': dictProto,
 
 	'.': function dot(obj) {
 		var fn = obj['@'] || self['@'],
