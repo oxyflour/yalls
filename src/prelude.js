@@ -52,6 +52,14 @@ var numberProto = {
 		return ret
 	},
 
+	'clamp': function(from, to) {
+		if (this < from)
+			return from
+		else if (this > to)
+			return to
+		return this
+	},
+
 }
 
 var arrayProto = {

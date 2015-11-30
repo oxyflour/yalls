@@ -47,6 +47,11 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 			var ret = [];
 			for (var i = this; i < _to; i++) ret.push(i);
 			return ret;
+		},
+
+		'clamp': function clamp(from, to) {
+			if (this < from) return from;else if (this > to) return to;
+			return this;
 		}
 
 	};
