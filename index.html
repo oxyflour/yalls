@@ -24,21 +24,22 @@ a:hover {
 <script title="time-travelling search" type="script/x-lua">
 failStack = [ ]
 
-amb = fn()
+amb = fn(vals)
 	callcc(cc => failStack.push(cc))
-	args.length and args.pop() or failStack.pop()
+	vals.length and vals.pop() or failStack.pop()
 end
 
 assert = fn(condition)
 	condition or failStack[failStack.length - 1]()
 end
 
-a = amb(1, 2, 3, 4, 5, 6, 7)
-b = amb(1, 2, 3, 4, 5, 6, 7)
-c = amb(1, 2, 3, 4, 5, 6, 7)
+-- search for Pythagorean triple
+a = amb(1.to(10))
+b = amb(1.to(10))
+c = amb(1.to(10))
 
 assert(a * a == b * b + c * c and c > b)
-echo(a, b, c)
+echo("{{a}}^2 = {{b}}^2 + {{c}}^2")
 
 </script>
 <script title="generator with call/cc" id="genLib" type="script/x-lua">
