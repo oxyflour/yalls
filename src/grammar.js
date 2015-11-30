@@ -453,7 +453,8 @@ var precedence = {
 	ADD: [12, 'left'],
 	CMP: [11, 'left'],
 	AND: [10, 'left'],
-	// to resolve idlist -> ID v.s. variable -> ID
+	// to resolve reduce confict `idlist -> ID` v.s. `variable -> ID`
+	// (ID) will be always be parsed as (idlist) rather than (variable)
 	')': [-1, 'left'],
 }
 
