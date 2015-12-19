@@ -28,7 +28,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 			var obj = this;
 			while (obj !== undefined && obj !== null && obj[prop] === undefined) obj = obj['@proto'];
-			return obj && obj[prop];
+			return obj !== undefined && obj !== null ? obj[prop] : undefined;
 		}
 
 	};

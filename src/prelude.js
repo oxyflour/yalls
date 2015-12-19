@@ -29,7 +29,7 @@ var self = {
 		var obj = this
 		while (obj !== undefined && obj !== null && obj[prop] === undefined)
 			obj = obj['@proto']
-		return obj && obj[prop]
+		return obj !== undefined && obj !== null ? obj[prop] : undefined
 	},
 
 }
