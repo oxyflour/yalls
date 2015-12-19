@@ -34,9 +34,9 @@ $.get('../build/table.json', function(table) {
 				input = [
 					'doAsync(fn(yield, next)',
 						'require = file => yield(asyncRequire(file, next))',
-						'local["@export"] = { }',
+						'exports = { }',
 						input,
-						'asyncCallback(local["@export"])',
+						'asyncCallback(exports)',
 					'end)',
 				].join('\n')
 
@@ -114,7 +114,7 @@ doAsync = fn(exec, next)
 end
 
 -- used for other scripts
-export { mkGenerator, doAsync }
+exports = { mkGenerator, doAsync }
 
 </script>
 </body>

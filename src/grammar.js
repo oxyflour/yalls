@@ -121,7 +121,7 @@ var actions = [
 	[/\:=|\+=|-=|\*=|\/=|%=/,
 		m => token('MUT', m)],
 
-	[/if|elseif|then|else|let|fn|while|for|do|end|nil|local|try|catch|throw|export|import|as|is/,
+	[/if|elseif|then|else|let|fn|while|for|do|end|nil|local|try|catch|throw|as|is/,
 		m => token(m, m)],
 
 	[/=>|\[|{|\(|\]|}|\)|\.|=|,|\:|\||#|@/,
@@ -191,7 +191,7 @@ function ifExp(conds) {
     	return ['if', conds[0], conds[1], ifExp(conds.slice(2))]
 }
 
-// [while cond block] -> 
+// [while cond block] ->
 function whileExp(cond, block) {
 	return ['callcc',
 		['lambda', 'break', 'continue',
@@ -255,8 +255,6 @@ var grammars = [
 		(l, s) => l.concat([s])],
 
 	['stmt', ['exp']],
-	['stmt', ['export', 'exp'],
-		(_export, e) => ['set-env', '@export', e]],
 	['stmt', ['fn', 'ID', 'pars', 'block', 'end'],
 		(_func, i, p, b, _end) => ['set-local', i, ['lambda'].concat(p).concat([b])]],
 	['stmt', ['varlist', '=', 'explist'],

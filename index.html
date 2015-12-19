@@ -229,7 +229,7 @@ assert = fn(condition)
 	condition or failStack[failStack.length - 1]()
 end
 
-export { amb, assert }
+exports = { amb, assert }
 </script>
 <script title="lib - generator with call/cc" id="genLib" type="script/x-lua">
 mkYield = fn(ret)
@@ -272,7 +272,7 @@ doAsync = fn(exec, next)
 end
 
 -- used for other scripts
-export { mkGenerator, doAsync }
+exports = { mkGenerator, doAsync }
 </script>
 <div id="tree"></div>
 <pre id="console"></pre>
@@ -340,9 +340,9 @@ export { mkGenerator, doAsync }
 			code = evaluate.compile(tree),
 			sandbox = evaluate.environment(null, prelude)
 
-		sandbox('@export', { })
+		sandbox('exports', { })
 		evaluate(code, sandbox)
-		return sandbox('@export')
+		return sandbox('exports')
 	})
 	env('console', console)
 	env('math', Math)

@@ -97,7 +97,7 @@
 		return token('AND', m);
 	}], [/\:=|\+=|-=|\*=|\/=|%=/, function (m) {
 		return token('MUT', m);
-	}], [/if|elseif|then|else|let|fn|while|for|do|end|nil|local|try|catch|throw|export|import|as|is/, function (m) {
+	}], [/if|elseif|then|else|let|fn|while|for|do|end|nil|local|try|catch|throw|as|is/, function (m) {
 		return token(m, m);
 	}], [/=>|\[|{|\(|\]|}|\)|\.|=|,|\:|\||#|@/, function (m) {
 		return token(m, m);
@@ -191,9 +191,7 @@
 		return ['begin', s];
 	}], ['stmtlist', ['stmtlist', 'stmt', 'newlines'], function (l, s) {
 		return l.concat([s]);
-	}], ['stmt', ['exp']], ['stmt', ['export', 'exp'], function (_export, e) {
-		return ['set-env', '@export', e];
-	}], ['stmt', ['fn', 'ID', 'pars', 'block', 'end'], function (_func, i, p, b, _end) {
+	}], ['stmt', ['exp']], ['stmt', ['fn', 'ID', 'pars', 'block', 'end'], function (_func, i, p, b, _end) {
 		return ['set-local', i, ['lambda'].concat(p).concat([b])];
 	}], ['stmt', ['varlist', '=', 'explist'], function (vl, _eq, el) {
 		return setExp(vl, el);

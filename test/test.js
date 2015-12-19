@@ -17,9 +17,9 @@ function makeRequire(file) {
 			env = evaluate.environment(root)
 
 		env('require', makeRequire(path))
-		env('@export', { })
+		env('exports', { })
 		evaluate(code, env)
-		return env('@export')
+		return env('exports')
 	}
 }
 
