@@ -2,7 +2,7 @@
 
 Function.prototype.apply2 = function(self, args, arga, kont) {
     if (!this.extraArgs) this.extraArgs = [ ]
-        
+
     this.extraArgs.push(this.arga)
     this.arga = arga
 
@@ -126,7 +126,6 @@ function applyProc(self, proc, args, arga, kont) {
         return applyKont(kont, proc.apply2(self, args, arga))
     }
     else {
-        console.log(proc)
         throw 'RuntimeError: ' + proc + ' is not a function!'
     }
 }

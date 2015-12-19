@@ -34,7 +34,7 @@ var self = {
 
 }
 
-var numberProto = {
+Number.prototype['@proto'] = {
 
 	'@proto': self,
 
@@ -62,7 +62,7 @@ var numberProto = {
 
 }
 
-var arrayProto = {
+Array.prototype['@proto'] = {
 
 	'@proto': self,
 
@@ -196,10 +196,6 @@ var prelude = {
 	},
 
 	'self': self,
-
-	'numberProto': Number.prototype['@proto'] = numberProto,
-	'arrayProto': Array.prototype['@proto'] = arrayProto,
-	'dictProto': dictProto,
 
 	'.': function dot(obj) {
 		var fn = obj['@'] || self['@'],

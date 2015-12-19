@@ -33,7 +33,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 	};
 
-	var numberProto = {
+	Number.prototype['@proto'] = {
 
 		'@proto': self,
 
@@ -56,7 +56,7 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 
 	};
 
-	var arrayProto = {
+	Array.prototype['@proto'] = {
 
 		'@proto': self,
 
@@ -228,10 +228,6 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
 		},
 
 		'self': self,
-
-		'numberProto': Number.prototype['@proto'] = numberProto,
-		'arrayProto': Array.prototype['@proto'] = arrayProto,
-		'dictProto': dictProto,
 
 		'.': function dot(obj) {
 			var fn = obj['@'] || self['@'],

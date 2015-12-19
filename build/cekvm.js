@@ -110,7 +110,6 @@ var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = 
         } else if (typeof proc === 'function') {
             return applyKont(kont, proc.apply2(self, args, arga));
         } else {
-            console.log(proc);
             throw 'RuntimeError: ' + proc + ' is not a function!';
         }
     }
