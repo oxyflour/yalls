@@ -5,6 +5,6 @@ var grammar = require('./src/grammar.js'),
 	evaluate = require('./src/cekvm.js'),
 	compile = evaluate.compile,
 	environment = evaluate.environment,
-	prelude = require('./src/prelude.js')
+	buildins = require('./src/buildins.js')
 
-module.exports = { table, build, parse, compile, evaluate, environment, prelude }
+module.exports = { table, build, parse, compile, evaluate, environment, buildins }

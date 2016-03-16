@@ -323,7 +323,7 @@ exports = { mkGenerator, doAsync }
 		}
 	}
 
-	var env = yalls.environment(null, yalls.prelude)
+	var env = yalls.environment(null, yalls.buildins)
 	env('echo', function() {
 		var content = Array.prototype.slice.call(arguments)
 			.map(function(a) { return '' + a }).join(' ')
@@ -333,7 +333,7 @@ exports = { mkGenerator, doAsync }
 		var input = $('#' + file).text(),
 			tree = yalls.parse(input),
 			code = yalls.compile(tree),
-			sandbox = yalls.environment(null, yalls.prelude)
+			sandbox = yalls.environment(null, yalls.buildins)
 
 		sandbox('exports', { })
 		yalls.evaluate(code, sandbox)

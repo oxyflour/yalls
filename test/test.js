@@ -19,7 +19,7 @@ function makeRequire(file) {
 	}
 }
 
-var root = yalls.environment(null, yalls.prelude)
+var root = yalls.environment(null, yalls.buildins)
 root('console', console)
 root('describe', describe)
 root('assert', assert)

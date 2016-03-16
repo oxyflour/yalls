@@ -65,9 +65,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    evaluate = __webpack_require__(6),
 	    compile = evaluate.compile,
 	    environment = evaluate.environment,
-	    prelude = __webpack_require__(7);
+	    buildins = __webpack_require__(7);
 
-	module.exports = { table: table, build: build, parse: parse, compile: compile, evaluate: evaluate, environment: environment, prelude: prelude };
+	module.exports = { table: table, build: build, parse: parse, compile: compile, evaluate: evaluate, environment: environment, buildins: buildins };
 
 /***/ },
 /* 1 */
@@ -1255,7 +1255,7 @@ return /******/ (function(modules) { // webpackBootstrap
 				if (k[0] === '@' && k !== '@') hasHook = hooks[k] = extend.arga[k];else obj[k] = extend.arga[k];
 			}
 
-			if (hasHook) obj['@'] = prelude.hook.apply2(this, [obj['@']], hooks);
+			if (hasHook) obj['@'] = buildins.hook.apply2(this, [obj['@']], hooks);
 
 			return obj;
 		},
@@ -1336,7 +1336,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	};
 
-	var prelude = {
+	var buildins = {
 
 		'nil': undefined,
 
@@ -1389,7 +1389,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		'loop': function loop(object, func) {
 			var data = [],
 			    ret = [],
-			    iterator = prelude.iterator(object);
+			    iterator = buildins.iterator(object);
 			while (data = iterator.apply(undefined, data)) {
 				ret.push(func.apply(undefined, data));
 			}return ret;
@@ -1397,7 +1397,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 		'zip': function zip() {
 			var arrays = Array.prototype.slice.call(arguments),
-			    fn = zip.arga.func || prelude.array;
+			    fn = zip.arga.func || buildins.array;
 			return arrays[0].map(function (e, i) {
 				return fn.apply(null, arrays.map(function (a) {
 					return a[i];
@@ -1406,7 +1406,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		},
 
 		'iterator': function iterator(object) {
-			if (typeof object === 'function') return object;else if (Array.isArray(object)) return prelude.ipair(object);else return prelude.pair(object);
+			if (typeof object === 'function') return object;else if (Array.isArray(object)) return buildins.ipair(object);else return buildins.pair(object);
 		},
 
 		'range': function range() {
@@ -1489,7 +1489,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	};
 
-	module.exports = prelude;
+	module.exports = buildins;
 
 /***/ }
 /******/ ])

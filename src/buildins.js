@@ -15,7 +15,7 @@ var self = {
 		}
 
 		if (hasHook)
-			obj['@'] = prelude.hook.apply2(this, [obj['@']], hooks)
+			obj['@'] = buildins.hook.apply2(this, [obj['@']], hooks)
 
 		return obj
 	},
@@ -92,7 +92,7 @@ var dictProto = {
 
 }
 
-var prelude = {
+var buildins = {
 
 	'nil': undefined,
 
@@ -118,7 +118,7 @@ var prelude = {
 
 	'loop': function(object, func) {
 		var data = [ ], ret = [ ],
-			iterator = prelude.iterator(object)
+			iterator = buildins.iterator(object)
 		while (data = iterator.apply(undefined, data))
 			ret.push(func.apply(undefined, data))
 		return ret
@@ -126,7 +126,7 @@ var prelude = {
 
 	'zip': function zip() {
 		var arrays = Array.prototype.slice.call(arguments),
-			fn = zip.arga.func || prelude.array
+			fn = zip.arga.func || buildins.array
 		return arrays[0].map(function(e, i) {
 			return fn.apply(null, arrays.map(a => a[i]))
 		})
@@ -136,9 +136,9 @@ var prelude = {
 		if (typeof(object) === 'function')
 			return object
 		else if (Array.isArray(object))
-			return prelude.ipair(object)
+			return buildins.ipair(object)
 		else
-			return prelude.pair(object)
+			return buildins.pair(object)
 	},
 
 	'range': function() {
@@ -212,4 +212,4 @@ var prelude = {
 
 }
 
-module.exports = prelude
+module.exports = buildins

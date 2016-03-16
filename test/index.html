@@ -93,7 +93,7 @@ function makeAsyncRequire(file) {
 	}
 }
 
-var root = yalls.environment(null, yalls.prelude)
+var root = yalls.environment(null, yalls.buildins)
 root('console', console)
 root('evaluate', yalls.evaluate)
 
