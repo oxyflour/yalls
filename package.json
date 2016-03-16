@@ -22,12 +22,14 @@
     "url": "https://github.com/oxyflour/yalls/issues"
   },
   "homepage": "https://github.com/oxyflour/yalls#readme",
-  "dependencies": {
-    "yajily": "latest"
-  },
   "devDependencies": {
-    "mocha":"latest",
     "babel": "latest",
-    "babel-core": "latest"
+    "babel-core": "^6.4.0",
+    "babel-loader": "^6.2.1",
+    "babel-polyfill": "^6.7.2",
+    "babel-preset-es2015": "^6.3.13",
+    "mocha": "latest",
+    "webpack": "^1.12.11",
+    "yajily": "0.0.5"
   }
 }

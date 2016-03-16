@@ -1,4 +1,4 @@
-(function() {
+var yajily = require('yajily')
 
 var line = 1, col = 1
 function count(value) {
@@ -456,8 +456,6 @@ var precedence = {
 	')': [-1, 'left'],
 }
 
-var yajily = typeof(window) !== 'undefined' ? window.yajily : require('../../yajily')
-
 function build() {
 	return yajily.parse.build(grammars)
 }
@@ -474,11 +472,4 @@ function parse(input, table) {
 	return tree
 }
 
-var grammar = { build, parse }
-
-if (typeof(module) !== 'undefined')
-	module.exports = grammar
-else if (typeof(window) !== 'undefined')
-	window.grammar = grammar
-
-})()
+module.exports = { build, parse }

@@ -1,29 +1,25 @@
 var assert = require('assert'),
-	babel = require('babel/polyfill'),
+	babel = require('babel-polyfill'),
 	fs = require('fs'),
-
-	grammar = require('../build/grammar'),
-	evaluate = require('../build/cekvm'),
-	prelude = require('../build/prelude'),
-	table = require('../build/table.json')
+	yalls = require('../build')
 
 function makeRequire(file) {
 	var dir = file.replace(/[^/]*$/, '')
 	return function(file) {
 		var path = dir + '/' + file + '.lua',
 			input = fs.readFileSync(path),
-			tree = grammar.parse(input, table),
-			code = evaluate.compile(tree),
-			env = evaluate.environment(root)
+			tree = yalls.parse(input),
+			code = yalls.compile(tree),
+			env = yalls.environment(root)
 
 		env('require', makeRequire(path))
 		env('exports', { })
-		evaluate(code, env)
+		yalls.evaluate(code, env)
 		return env('exports')
 	}
 }
 
-var root = evaluate.environment(null, prelude)
+var root = yalls.environment(null, yalls.prelude)
 root('console', console)
 root('describe', describe)
 root('assert', assert)

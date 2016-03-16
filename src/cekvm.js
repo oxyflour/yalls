@@ -1,5 +1,3 @@
-(function() {
-
 Function.prototype.apply2 = function(self, args, arga, kont) {
     if (!this.extraArgs) this.extraArgs = [ ]
 
@@ -315,9 +313,4 @@ run.compile = function(tree) {
     return anf(compile(tree))
 }
 
-if (typeof(module) !== 'undefined')
-	module.exports = run
-else if (typeof(window) !== 'undefined')
-	window.evaluate = run
-
-})()
+module.exports = run

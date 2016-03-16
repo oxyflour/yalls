@@ -282,11 +282,7 @@ exports = { mkGenerator, doAsync }
 <script src="//cdnjs.cloudflare.com/ajax/libs/babel-core/5.6.15/browser-polyfill.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ace.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/mode-lua.js"></script>
-<script src="../yajily/build/lexer.js"></script>
-<script src="../yajily/build/parser.js"></script>
-<script src="build/cekvm.js"></script>
-<script src="build/grammar.js"></script>
-<script src="build/prelude.js"></script>
+<script src="build/index.js"></script>
 <script>
 
 	function format(tree, depth) {
@@ -307,19 +303,18 @@ exports = { mkGenerator, doAsync }
 	}
 
 	function execute() {
-		if (!table) return
 		$('#result').empty()
 		$('#console').empty()
 		$('#tree').empty()
 		try {
 			var input = editor.getValue(),
-				tree = grammar.parse(input, table),
-				code = evaluate.compile(tree),
-				sandbox = evaluate.environment(env)
+				tree = yalls.parse(input),
+				code = yalls.compile(tree),
+				sandbox = yalls.environment(env)
 			$('#tree').html(format(tree))
 
 			var tickStart = Date.now()
-			evaluate(code, sandbox)
+			yalls.evaluate(code, sandbox)
 			$('#time').text((Date.now() - tickStart) + 'ms')
 		}
 		catch (e) {
@@ -328,7 +323,7 @@ exports = { mkGenerator, doAsync }
 		}
 	}
 
-	var env = evaluate.environment(null, prelude)
+	var env = yalls.environment(null, yalls.prelude)
 	env('echo', function() {
 		var content = Array.prototype.slice.call(arguments)
 			.map(function(a) { return '' + a }).join(' ')
@@ -336,12 +331,12 @@ exports = { mkGenerator, doAsync }
 	})
 	env('require', function(file) {
 		var input = $('#' + file).text(),
-			tree = grammar.parse(input, table),
-			code = evaluate.compile(tree),
-			sandbox = evaluate.environment(null, prelude)
+			tree = yalls.parse(input),
+			code = yalls.compile(tree),
+			sandbox = yalls.environment(null, yalls.prelude)
 
 		sandbox('exports', { })
-		evaluate(code, sandbox)
+		yalls.evaluate(code, sandbox)
 		return sandbox('exports')
 	})
 	env('console', console)
@@ -350,12 +345,7 @@ exports = { mkGenerator, doAsync }
 	env('timeout', setTimeout.bind(window))
 	env('$', $)
 
-	// compiled table, will be loaded later
-	var table
-	$.get('build/table.json', function(t) {
-		table = t
-		execute()
-	})
+	setTimeout(execute, 0)
 
 </script>
 <script>

@@ -5,73 +5,12 @@
 </head>
 <body>
 <div id="mocha"></div>
-<script src="../../yajily/build/lexer.js"></script>
-<script src="../../yajily/build/parser.js"></script>
-<script src="../build/grammar.js"></script>
-<script src="../build/prelude.js"></script>
-<script src="../build/cekvm.js"></script>
+<script src="../build/index.js"></script>
 <script src="//cdn.bootcss.com/jquery/2.1.4/jquery.min.js"></script>
 <script src="//cdn.bootcss.com/mocha/2.3.3/mocha.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/chai/3.3.0/chai.min.js"></script>
 <script src="//cdn.bootcss.com/babel-core/5.8.25/browser-polyfill.min.js"></script>
 <script>mocha.setup('bdd')</script>
-<script>
-
-$.get('../build/table.json', function(table) {
-
-	var loaded = { }
-
-	function makeAsyncRequire(file) {
-		var dir = file.replace(/[^/]*$/, '')
-		return function(file, callback) {
-			var path = dir + '/' + file + '.lua'
-
-			if (loaded[path]) setTimeout(function() {
-				callback(loaded[path])
-			}, 0)
-			else $.get(path, function(input) {
-
-				input = [
-					'doAsync(fn(yield, next)',
-						'require = file => yield(asyncRequire(file, next))',
-						'exports = { }',
-						input,
-						'asyncCallback(exports)',
-					'end)',
-				].join('\n')
-
-				var tree = grammar.parse(input, table),
-					code = evaluate.compile(tree),
-					env = evaluate.environment(root)
-
-				env('asyncRequire', makeAsyncRequire(path))
-				env('asyncCallback', function(mod) {
-					loaded[path] = mod
-					callback(mod)
-				})
-				evaluate(code, env)
-			})
-		}
-	}
-
-	var root = evaluate.environment(null, prelude)
-	root('console', console)
-	root('evaluate', evaluate)
-
-	root('describe', describe)
-	root('it', it)
-	root('assert', chai.assert)
-
-	var tree = grammar.parse($('#async').text(), table),
-		code = evaluate.compile(tree)
-	evaluate(code, root)
-
-	root('asyncRequire', makeAsyncRequire('./'))('./test', function() {
-		mocha.run()
-	})
-})
-
-</script>
 <script type="script/x-lua" id="async">
 
 mkYield = fn(ret)
@@ -115,6 +54,60 @@ end
 
 -- used for other scripts
 exports = { mkGenerator, doAsync }
+
+</script>
+<script>
+
+var loaded = { }
+
+function makeAsyncRequire(file) {
+	var dir = file.replace(/[^/]*$/, '')
+	return function(file, callback) {
+		var path = dir + '/' + file + '.lua'
+
+		if (loaded[path]) setTimeout(function() {
+			callback(loaded[path])
+		}, 0)
+		else $.get(path, function(input) {
+
+			input = [
+				'doAsync(fn(yield, next)',
+					'require = file => yield(asyncRequire(file, next))',
+					'exports = { }',
+					input,
+					'asyncCallback(exports)',
+				'end)',
+			].join('\n')
+
+			var tree = yalls.parse(input),
+				code = yalls.compile(tree),
+				env = yalls.environment(root)
+
+			env('asyncRequire', makeAsyncRequire(path))
+			env('asyncCallback', function(mod) {
+				loaded[path] = mod
+				callback(mod)
+			})
+			yalls.evaluate(code, env)
+		})
+	}
+}
+
+var root = yalls.environment(null, yalls.prelude)
+root('console', console)
+root('evaluate', yalls.evaluate)
+
+root('describe', describe)
+root('it', it)
+root('assert', chai.assert)
+
+var tree = yalls.parse($('#async').text()),
+	code = yalls.compile(tree)
+yalls.evaluate(code, root)
+
+root('asyncRequire', makeAsyncRequire('./'))('./test', function() {
+	mocha.run()
+})
 
 </script>
 </body>

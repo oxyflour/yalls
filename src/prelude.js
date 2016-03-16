@@ -1,5 +1,3 @@
-(function() {
-
 var self = {
 
 	'extend': function extend(obj) {
@@ -214,9 +212,4 @@ var prelude = {
 
 }
 
-if (typeof(module) !== 'undefined')
-	module.exports = prelude
-else if (typeof(window) !== 'undefined')
-	window.prelude = prelude
-
-})()
+module.exports = prelude
