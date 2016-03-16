@@ -68,7 +68,7 @@ function value(exp, env) {
 function closure(lambda, parent) {
     var clo = function() {
         var env = callenv(lambda, parent, this, arguments, clo.arga)
-        return run(lambda[lambda.length - 1], env)
+        return evaluate(lambda[lambda.length - 1], env)
     }
     clo.yallsClosure = { lambda, parent }
     return clo
@@ -276,9 +276,9 @@ var anfRules = {
     },
 }
 
-function compile(tree) {
+function compileTree(tree) {
     if (Array.isArray(tree))
-        return tree.map(compile)
+        return tree.map(compileTree)
     else if (tree === null || tree === undefined)
         return undefined
     else if (tree.type === 'STR')
@@ -301,16 +301,15 @@ function expression(exp, index) {
     return exp
 }
 
-function run(code, env, kont) {
+function evaluate(code, env, kont) {
     var state = [expression(code), env, kont]
     while (state[0] && state[0].isStatement || state[2])
         state = step.apply(undefined, state)
     return state[0]
 }
 
-run.environment = environment
-run.compile = function(tree) {
-    return anf(compile(tree))
+function compile(tree) {
+    return anf(compileTree(tree))
 }
 
-module.exports = run
+module.exports = { evaluate, environment, compile }
