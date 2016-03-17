@@ -1,3 +1,5 @@
+var webpack = require('webpack')
+
 module.exports = {
 	entry: './index.js',
 	output: {
@@ -11,4 +13,7 @@ module.exports = {
             { test: /\.js$/, loader: 'babel-loader?presets[]=es2015' }
         ]
     },
+    externals: {
+    	fs: true
+    }
 }
