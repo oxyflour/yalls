@@ -9,10 +9,10 @@ Yet Another Lua-Like Script
 * basically lua-like grammars with additional features like arrow functions, named-arguments, unpacking assignments, etc.
 * call/cc and all other powerfull features from it (including ambiguous calculation, yield and generators, async control flow, etc.)
 * smiple prototype-based object-oriented but also provides useful meta methods
+* buildin module loader
 
 ## todos
 * complete documents and tests
 * optimizations of performance
 * compiler to javascript
-* buildin module loader
 * maybe macros/pattern match
