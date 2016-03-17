@@ -1,5 +1,6 @@
 var babelPolyfil = require('babel-polyfill'),
-	buildTable = () => require('./build').build()
+	builded = null,
+	buildTable = () => builded || (builded = require('./build').build())
 module.exports = function(source) {
 	this.cacheable()
 	console.log('building grammar table...')

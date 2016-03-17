@@ -17,50 +17,6 @@ var checkDependency = (base, child) => {
     })
 }
 
-// prepare module environment
-var LOADER_LIB = `
-mkYield = fn(ret)
-	next = fn(cc)
-		fn(value)
-			callcc(fn(rcc)
-				ret := rcc
-				cc(value)
-			end)
-		end
-	end
-	fn(value)
-		callcc(fn(cc)
-			ret({ next = next(cc), value })
-		end)
-	end
-end
-
-mkGenerator = fn(iter)
-	next = fn()
-		callcc(fn(cc)
-			yield = mkYield(cc)
-			iter(yield)
-		end)
-	end
-	fn(value)
-		ret = next and next(value)
-		next := ret and ret.next
-		ret and ret.value
-	end
-end
-
-doAsync = fn(exec, next)
-	next = mkGenerator(fn(yield)
-		exec(yield, next)
-		-- stop it or the code after doAsync will be executed again
-		yield()
-	end)
-	next()
-end
-
-exports = { mkGenerator, doAsync }
-`
-
 var httpFetch = url =>
 		fetch(url).then(resp => resp.text()),
 	fileFetch = path => new Promise((resolve, reject) =>
@@ -130,11 +86,12 @@ var makeRequire = (base, root) => (path, callback) => {
     }
 }
 
+var loaderLib = require('raw!./lib/async.lua')
 var execModule = (path, vars, callback) => {
 	var env = environment(null, buildins)
 	for (var name in vars)
 		env(name, vars[name])
-	evaluate(compile(parse(LOADER_LIB)), env)
+	evaluate(compile(parse(loaderLib)), env)
 	makeRequire('.', env)(path, callback)
 }
 

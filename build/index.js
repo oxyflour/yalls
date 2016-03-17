@@ -85,9 +85,6 @@ return /******/ (function(modules) { // webpackBootstrap
 		});
 	};
 
-	// prepare module environment
-	var LOADER_LIB = '\nmkYield = fn(ret)\n\tnext = fn(cc)\n\t\tfn(value)\n\t\t\tcallcc(fn(rcc)\n\t\t\t\tret := rcc\n\t\t\t\tcc(value)\n\t\t\tend)\n\t\tend\n\tend\n\tfn(value)\n\t\tcallcc(fn(cc)\n\t\t\tret({ next = next(cc), value })\n\t\tend)\n\tend\nend\n\nmkGenerator = fn(iter)\n\tnext = fn()\n\t\tcallcc(fn(cc)\n\t\t\tyield = mkYield(cc)\n\t\t\titer(yield)\n\t\tend)\n\tend\n\tfn(value)\n\t\tret = next and next(value)\n\t\tnext := ret and ret.next\n\t\tret and ret.value\n\tend\nend\n\ndoAsync = fn(exec, next)\n\tnext = mkGenerator(fn(yield)\n\t\texec(yield, next)\n\t\t-- stop it or the code after doAsync will be executed again\n\t\tyield()\n\tend)\n\tnext()\nend\n\nexports = { mkGenerator, doAsync }\n';
-
 	var httpFetch = function httpFetch(url) {
 		return fetch(url).then(function (resp) {
 			return resp.text();
@@ -157,11 +154,12 @@ return /******/ (function(modules) { // webpackBootstrap
 		};
 	};
 
+	var loaderLib = __webpack_require__(19);
 	var execModule = function execModule(path, vars, callback) {
 		var env = environment(null, buildins);
 		for (var name in vars) {
 			env(name, vars[name]);
-		}evaluate(compile(parse(LOADER_LIB)), env);
+		}evaluate(compile(parse(loaderLib)), env);
 		makeRequire('.', env)(path, callback);
 	};
 
@@ -2254,6 +2252,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	// EXPORTS //
 
 	module.exports = re;
+
+/***/ },
+/* 19 */
+/***/ function(module, exports) {
+
+	module.exports = "mkYield = fn(ret)\r\n\tnext = fn(cc)\r\n\t\tfn(value)\r\n\t\t\tcallcc(fn(rcc)\r\n\t\t\t\tret := rcc\r\n\t\t\t\tcc(value)\r\n\t\t\tend)\r\n\t\tend\r\n\tend\r\n\tfn(value)\r\n\t\tcallcc(fn(cc)\r\n\t\t\tret({ next = next(cc), value })\r\n\t\tend)\r\n\tend\r\nend\r\n\r\nmkGenerator = fn(iter)\r\n\tnext = fn()\r\n\t\tcallcc(fn(cc)\r\n\t\t\tyield = mkYield(cc)\r\n\t\t\titer(yield)\r\n\t\tend)\r\n\tend\r\n\tfn(value)\r\n\t\tret = next and next(value)\r\n\t\tnext := ret and ret.next\r\n\t\tret and ret.value\r\n\tend\r\nend\r\n\r\ndoAsync = fn(exec, next)\r\n\tnext = mkGenerator(fn(yield)\r\n\t\texec(yield, next)\r\n\t\t-- stop it or the code after doAsync will be executed again\r\n\t\tyield()\r\n\tend)\r\n\tnext()\r\nend\r\n\r\nexports = { mkGenerator, doAsync }\r\n"
 
 /***/ }
 /******/ ])
